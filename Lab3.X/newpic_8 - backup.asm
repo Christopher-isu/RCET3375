@@ -88,19 +88,19 @@ MainLoop:
     MOVLW   0b00000001 ; Set RB0 high to scan keys 1-3
     IORWF   PORTB, F    ; Activate row 0
     NOP                 ; 1 µs delay for column input settling
-    BTFSS   PORTB, 4    ; Check RB4 (col0): high if key 1 pressed
+    BTFSS   PORTB, 4    ; Check RB4 (col0): low if key 1 pressed
     GOTO    key2        ; Skip if not pressed
     MOVLW   1           ; Load key 1 value
     MOVWF   DECIMAL     ; Store as highest key so far
     BSF     KEY, 0      ; Set keypress flag
 key2:
-    BTFSS   PORTB, 5    ; Check RB5 (col1): high if key 2 pressed
+    BTFSS   PORTB, 5    ; Check RB5 (col1): low if key 2 pressed
     GOTO    key3        ; Skip if not pressed
     MOVLW   2           ; Load key 2 value
     MOVWF   DECIMAL     ; Update highest key (overwrites 1)
     BSF     KEY, 0      ; Set keypress flag
 key3:
-    BTFSS   PORTB, 6    ; Check RB6 (col2): high if key 3 pressed
+    BTFSS   PORTB, 6    ; Check RB6 (col2): low if key 3 pressed
     GOTO    row1        ; Skip to next row if not pressed
     MOVLW   3           ; Load key 3 value
     MOVWF   DECIMAL     ; Update highest key (overwrites 1,2)
@@ -113,19 +113,19 @@ row1:
     MOVLW   0b00000010 ; Set RB1 high to scan keys 4-6
     IORWF   PORTB, F    ; Activate row 1
     NOP                 ; 1 µs delay for column input settling
-    BTFSS   PORTB, 4    ; Check RB4 (col0): high if key 4 pressed
+    BTFSS   PORTB, 4    ; Check RB4 (col0): low if key 4 pressed
     GOTO    key5        ; Skip if not pressed
     MOVLW   4           ; Load key 4 value
     MOVWF   DECIMAL     ; Update highest key (overwrites 1-3)
     BSF     KEY, 0      ; Set keypress flag
 key5:
-    BTFSS   PORTB, 5    ; Check RB5 (col1): high if key 5 pressed
+    BTFSS   PORTB, 5    ; Check RB5 (col1): low if key 5 pressed
     GOTO    key6        ; Skip if not pressed
     MOVLW   5           ; Load key 5 value
     MOVWF   DECIMAL     ; Update highest key (overwrites 1-4)
     BSF     KEY, 0      ; Set keypress flag
 key6:
-    BTFSS   PORTB, 6    ; Check RB6 (col2): high if key 6 pressed
+    BTFSS   PORTB, 6    ; Check RB6 (col2): low if key 6 pressed
     GOTO    row2        ; Skip to next row if not pressed
     MOVLW   6           ; Load key 6 value
     MOVWF   DECIMAL     ; Update highest key (overwrites 1-5)
@@ -138,19 +138,19 @@ row2:
     MOVLW   0b00000100 ; Set RB2 high to scan keys 7-9
     IORWF   PORTB, F    ; Activate row 2
     NOP                 ; 1 µs delay for column input settling
-    BTFSS   PORTB, 4    ; Check RB4 (col0): high if key 7 pressed
+    BTFSS   PORTB, 4    ; Check RB4 (col0): low if key 7 pressed
     GOTO    key8        ; Skip if not pressed
     MOVLW   7           ; Load key 7 value
     MOVWF   DECIMAL     ; Update highest key (overwrites 1-6)
     BSF     KEY, 0      ; Set keypress flag
 key8:
-    BTFSS   PORTB, 5    ; Check RB5 (col1): high if key 8 pressed
+    BTFSS   PORTB, 5    ; Check RB5 (col1): low if key 8 pressed
     GOTO    key9        ; Skip if not pressed
     MOVLW   8           ; Load key 8 value
     MOVWF   DECIMAL     ; Update highest key (overwrites 1-7)
     BSF     KEY, 0      ; Set keypress flag
 key9:
-    BTFSS   PORTB, 6    ; Check RB6 (col2): high if key 9 pressed
+    BTFSS   PORTB, 6    ; Check RB6 (col2): low if key 9 pressed
     GOTO    output      ; Skip to output if not pressed
     MOVLW   9           ; Load key 9 value
     MOVWF   DECIMAL     ; Update highest key (overwrites 1-8)

@@ -8,19 +8,20 @@
 ;=================================================================
 ; Device Configuration
 ;=================================================================
-    CONFIG FOSC = INTRC_CLKOUT ; Use internal oscillator with clock out on RA6
-    CONFIG WDTE = OFF ; Disable watchdog timer to prevent resets
-    CONFIG PWRTE = OFF ; Disable power-up timer for immediate start
-    CONFIG MCLRE = ON ; Enable MCLR pin for external reset
-    CONFIG CP = OFF ; Disable code protection for development
-    CONFIG CPD = OFF ; Disable data memory protection
-    CONFIG BOREN = OFF ; Disable brown-out reset for stable power
-    CONFIG IESO = OFF ; Disable clock switchover for internal osc
-    CONFIG FCMEN = OFF ; Disable fail-safe clock monitor
-    CONFIG LVP = OFF ; Disable low-voltage programming
+    CONFIG FOSC = INTRC_CLKOUT ; Internal oscillator with clock out
+    CONFIG WDTE = OFF ; Watchdog Timer disabled
+    CONFIG PWRTE = OFF ; Power-up Timer disabled
+    CONFIG MCLRE = ON ; MCLR pin enabled
+    CONFIG CP = OFF ; Code protection disabled
+    CONFIG CPD = OFF ; Data memory protection disabled
+    CONFIG BOREN = OFF ; Brown-out Reset disabled
+    CONFIG IESO = OFF ; Internal/External Switchover disabled
+    CONFIG FCMEN = OFF ; Fail-Safe Clock Monitor disabled
+    CONFIG LVP = OFF ; Low-voltage programming disabled
 
-    CONFIG BOR4V = BOR40V ; Set brown-out voltage (ignored, BOREN=OFF)
-    CONFIG WRT = OFF ; Disable Flash write protection
+    CONFIG BOR4V = BOR40V ; Brown-out Reset at 4.0V
+    CONFIG WRT = OFF ; Flash memory write protection disabled
+
 
 ;=================================================================
 ; Include Core Definitions
@@ -2333,168 +2334,156 @@ stk_offset SET 0
 auto_size SET 0
 ENDM
 # 8 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include/xc.inc" 2 3
-# 22 "newpic_8.asm" 2
+# 23 "newpic_8.asm" 2
+
+
 
 ;=================================================================
 ; Reset Vector
+; When assembly code is placed in a psect, it can be manipulated as a
+; whole by the linker and placed in memory.
+;
+; In this example, barfunc is the program section (psect) name, 'local' means
+; that the section will not be combined with other sections even if they have
+; the same name. class=CODE means the barfunc must go in the CODE container.
+; PIC18 should have a delta (addressible unit size) of 1 (default) since they
+; are byte addressible. PIC10/12/16 have a delta of 2 since they are word
+; addressible. PIC18 should have a reloc (alignment) flag of 2 for any
+; psect which contains executable code. PIC10/12/16 can use the default
+; reloc value of 1. Use one of the psects below for the device you use:
 ;=================================================================
-    PSECT resetVect,class=CODE,delta=2 ; Define reset vector section at 0x0000
-    GOTO Start ; Jump to initialization on power-up/reset
+    PSECT resetVect,class=CODE,delta=2 ; PIC10/12/16
+    ; psect barfunc,local,class=CODE,reloc=2 ; PIC18
+    GOTO Start
 
 ;=================================================================
 ; Main Code Section
 ;=================================================================
-    PSECT code,class=CODE,delta=2 ; Main program code section
+    PSECT code,class=CODE,delta=2
 
-; Reserve working registers in Bank 0 RAM
-DECIMAL EQU 0x21 ; Stores highest detected key value (1-9)
-ASCII EQU 0x22 ; Holds ASCII code for output ('1'-'9', '0')
-KEY EQU 0x23 ; Bit 0=1 if any key is pressed, else 0
+; Reserve working registers
+TEMP EQU 0x20
+VALUE EQU 0x21
+ASCII EQU 0x22
 
 Start:
-    ; Configure 4 MHz internal oscillator
-    BCF STATUS, 6 ; Select Bank 1 (((STATUS) and 07Fh), 6=0, ((STATUS) and 07Fh), 5=1)
-    BSF STATUS, 5 ; for OSCCON access
-    MOVLW 0b01100001 ; Set 4 MHz (IRCF=110), use internal clock (((OSCCON) and 07Fh), 0=1)
-    MOVWF OSCCON ; Write to OSCCON for stable timing
+    ; Set up internal oscillator to 4 MHz
+    BCF STATUS, 6 ; ((STATUS) and 07Fh), 6 = 0
+    BSF STATUS, 5 ; ((STATUS) and 07Fh), 5 = 1 ? Bank 1
+    MOVLW 0x61
+    MOVWF OSCCON ; IRCF = 110 (4 MHz), ((OSCCON) and 07Fh), 0 = 01
 
-    ; Configure PORTB: ((PORTB) and 07Fh), 0 -((PORTB) and 07Fh), 2 outputs (rows), ((PORTB) and 07Fh), 3 -((PORTB) and 07Fh), 7 inputs (columns)
-    BCF STATUS, 6 ; Stay in Bank 1
-    BSF STATUS, 5 ; for TRISB access
-    MOVLW 0b11111000 ; ((PORTB) and 07Fh), 0 -((PORTB) and 07Fh), 2=0 (outputs), ((PORTB) and 07Fh), 3 -((PORTB) and 07Fh), 7=1 (inputs)
-    MOVWF TRISB ; Set PORTB direction for keypad matrix
+    ; Configure PORTB as input (will be changed dynamically in scan)
+    BCF STATUS, 6
+    BSF STATUS, 5 ; Bank 1
+    MOVLW 0xFF
+    MOVWF TRISB
 
-    ; Configure PORTC as output for ASCII data and WE signal
-    BCF STATUS, 6 ; Stay in Bank 1
-    BSF STATUS, 5 ; for TRISC access
-    CLRF TRISC ; All PORTC bits output (((PORTC) and 07Fh), 0 -((PORTC) and 07Fh), 6=ASCII, ((PORTC) and 07Fh), 7=WE)
+    ; Configure PORTC as output
+    BCF STATUS, 6
+    BSF STATUS, 5 ; Bank 1
+    CLRF TRISC
 
-    ; Disable analog functions for digital I/O
-    BSF STATUS, 6 ; Select Bank 3 (((STATUS) and 07Fh), 6=1, ((STATUS) and 07Fh), 5=1)
-    BSF STATUS, 5 ; for ANSEL/ANSELH
-    CLRF ANSELH ; Disable analog on PORTB (((PORTB) and 07Fh), 4 -((PORTB) and 07Fh), 7)
-    CLRF ANSEL ; Disable analog on PORTA/C
+    ; Disable analog functions
+    BSF STATUS, 6
+    BSF STATUS, 5 ; Bank 3
+    CLRF ANSELH
 
-    ; Disable comparators to free PORT pins
-    BSF STATUS, 6 ; Select Bank 2 (((STATUS) and 07Fh), 6=1, ((STATUS) and 07Fh), 5=0)
-    BCF STATUS, 5 ; for CM1CON0/CM2CON0
-    CLRF CM1CON0 ; Turn off comparator 1
-    CLRF CM2CON0 ; Turn off comparator 2
+    BCF STATUS, 6
+    BSF STATUS, 5 ; Bank 1
+    CLRF ANSEL
 
-    ; Disable PORTB weak pull-ups (external pull-ups used)
-    BCF STATUS, 6 ; Select Bank 1 (((STATUS) and 07Fh), 6=0, ((STATUS) and 07Fh), 5=1)
-    BSF STATUS, 5 ; for OPTION_REG
-    BSF OPTION_REG, 7 ; Disable internal pull-ups (RBPU=1)
+    ; Disable comparators
+    CLRF CM1CON0
+    CLRF CM2CON0
 
-    ; Initialize PORTC to low
-    BCF STATUS, 6 ; Select Bank 0 (((STATUS) and 07Fh), 6=0, ((STATUS) and 07Fh), 5=0)
-    BCF STATUS, 5 ; for PORTC access
-    CLRF PORTC ; Clear PORTC outputs to avoid initial glitches
+    ; Disable PORTB weak pull-ups
+    BCF STATUS, 6
+    BCF STATUS, 5 ; Bank 0
+    BSF OPTION_REG, 7
+
+    ; Clear PORTC
+    CLRF PORTC
 
 MainLoop:
-    BCF STATUS, 6 ; Select Bank 0 for PORTB/C access
-    BCF STATUS, 5 ; Ensure ((STATUS) and 07Fh), 5=0
-    CLRF KEY ; Clear keypress flag (no key detected yet)
-    CLRF DECIMAL ; Clear decimal value for highest key (1-9)
+    ; --- Keypad scan replacing DIP switch logic ---
+    CLRF VALUE ; Default decimal = 0 (no key pressed yet)
 
-    ; Scan Row 0 (((PORTB) and 07Fh), 0=1): keys 1-3, checking columns ((PORTB) and 07Fh), 4 -((PORTB) and 07Fh), 6
-    MOVLW 0b11111000 ; Mask to clear row bits ((PORTB) and 07Fh), 0 -((PORTB) and 07Fh), 2
-    ANDWF PORTB, F ; Set all rows low (disable other rows)
-    MOVLW 0b00000001 ; Set ((PORTB) and 07Fh), 0 high to scan keys 1-3
-    IORWF PORTB, F ; Activate row 0
-    NOP ; 1 탎 delay for column input settling
-    BTFSS PORTB, 4 ; Check ((PORTB) and 07Fh), 4 (col0): high if key 1 pressed
-    GOTO key2 ; Skip if not pressed
-    MOVLW 1 ; Load key 1 value
-    MOVWF DECIMAL ; Store as highest key so far
-    BSF KEY, 0 ; Set keypress flag
-key2:
-    BTFSS PORTB, 5 ; Check ((PORTB) and 07Fh), 5 (col1): high if key 2 pressed
-    GOTO key3 ; Skip if not pressed
-    MOVLW 2 ; Load key 2 value
-    MOVWF DECIMAL ; Update highest key (overwrites 1)
-    BSF KEY, 0 ; Set keypress flag
-key3:
-    BTFSS PORTB, 6 ; Check ((PORTB) and 07Fh), 6 (col2): high if key 3 pressed
-    GOTO row1 ; Skip to next row if not pressed
-    MOVLW 3 ; Load key 3 value
-    MOVWF DECIMAL ; Update highest key (overwrites 1,2)
-    BSF KEY, 0 ; Set keypress flag
+    ; Row 0 scan (((PORTB) and 07Fh), 0 high, ((PORTB) and 07Fh), 1?((PORTB) and 07Fh), 3 low)
+    MOVLW %00001110 ; ((PORTB) and 07Fh), 0=1 active, ((PORTB) and 07Fh), 1?((PORTB) and 07Fh), 3=0
+    MOVWF PORTB ; Drive row pattern
+    MOVF PORTB, W ; Read columns (((PORTB) and 07Fh), 4?((PORTB) and 07Fh), 7)
+    ANDLW %11110000 ; Mask upper nibble (columns)
+    BTFSC STATUS, 2 ; Skip if all column bits are 0
+    GOTO Row1Done
+    BTFSC PORTB, 4 ; Col0 (((PORTB) and 07Fh), 4) pressed?
+    MOVLW 1
+    BTFSC PORTB, 5 ; Col1 (((PORTB) and 07Fh), 5) pressed?
+    MOVLW 2
+    BTFSC PORTB, 6 ; Col2 (((PORTB) and 07Fh), 6) pressed?
+    MOVLW 3
+    MOVWF VALUE
+Row1Done:
 
-row1:
-    ; Scan Row 1 (((PORTB) and 07Fh), 1=1): keys 4-6, checking columns ((PORTB) and 07Fh), 4 -((PORTB) and 07Fh), 6
-    MOVLW 0b11111000 ; Mask to clear row bits ((PORTB) and 07Fh), 0 -((PORTB) and 07Fh), 2
-    ANDWF PORTB, F ; Set all rows low
-    MOVLW 0b00000010 ; Set ((PORTB) and 07Fh), 1 high to scan keys 4-6
-    IORWF PORTB, F ; Activate row 1
-    NOP ; 1 탎 delay for column input settling
-    BTFSS PORTB, 4 ; Check ((PORTB) and 07Fh), 4 (col0): high if key 4 pressed
-    GOTO key5 ; Skip if not pressed
-    MOVLW 4 ; Load key 4 value
-    MOVWF DECIMAL ; Update highest key (overwrites 1-3)
-    BSF KEY, 0 ; Set keypress flag
-key5:
-    BTFSS PORTB, 5 ; Check ((PORTB) and 07Fh), 5 (col1): high if key 5 pressed
-    GOTO key6 ; Skip if not pressed
-    MOVLW 5 ; Load key 5 value
-    MOVWF DECIMAL ; Update highest key (overwrites 1-4)
-    BSF KEY, 0 ; Set keypress flag
-key6:
-    BTFSS PORTB, 6 ; Check ((PORTB) and 07Fh), 6 (col2): high if key 6 pressed
-    GOTO row2 ; Skip to next row if not pressed
-    MOVLW 6 ; Load key 6 value
-    MOVWF DECIMAL ; Update highest key (overwrites 1-5)
-    BSF KEY, 0 ; Set keypress flag
+    ; Row 1 scan (((PORTB) and 07Fh), 1 high, ((PORTB) and 07Fh), 0,((PORTB) and 07Fh), 2,((PORTB) and 07Fh), 3 low)
+    MOVLW %00001101 ; ((PORTB) and 07Fh), 1=1 active
+    MOVWF PORTB
+    MOVF PORTB, W
+    ANDLW %11110000
+    BTFSC STATUS, 2
+    GOTO Row2Done
+    BTFSC PORTB, 4
+    MOVLW 4
+    BTFSC PORTB, 5
+    MOVLW 5
+    BTFSC PORTB, 6
+    MOVLW 6
+    MOVWF VALUE
+Row2Done:
 
-row2:
-    ; Scan Row 2 (((PORTB) and 07Fh), 2=1): keys 7-9, checking columns ((PORTB) and 07Fh), 4 -((PORTB) and 07Fh), 6
-    MOVLW 0b11111000 ; Mask to clear row bits ((PORTB) and 07Fh), 0 -((PORTB) and 07Fh), 2
-    ANDWF PORTB, F ; Set all rows low
-    MOVLW 0b00000100 ; Set ((PORTB) and 07Fh), 2 high to scan keys 7-9
-    IORWF PORTB, F ; Activate row 2
-    NOP ; 1 탎 delay for column input settling
-    BTFSS PORTB, 4 ; Check ((PORTB) and 07Fh), 4 (col0): high if key 7 pressed
-    GOTO key8 ; Skip if not pressed
-    MOVLW 7 ; Load key 7 value
-    MOVWF DECIMAL ; Update highest key (overwrites 1-6)
-    BSF KEY, 0 ; Set keypress flag
-key8:
-    BTFSS PORTB, 5 ; Check ((PORTB) and 07Fh), 5 (col1): high if key 8 pressed
-    GOTO key9 ; Skip if not pressed
-    MOVLW 8 ; Load key 8 value
-    MOVWF DECIMAL ; Update highest key (overwrites 1-7)
-    BSF KEY, 0 ; Set keypress flag
-key9:
-    BTFSS PORTB, 6 ; Check ((PORTB) and 07Fh), 6 (col2): high if key 9 pressed
-    GOTO output ; Skip to output if not pressed
-    MOVLW 9 ; Load key 9 value
-    MOVWF DECIMAL ; Update highest key (overwrites 1-8)
-    BSF KEY, 0 ; Set keypress flag
+    ; Row 2 scan (((PORTB) and 07Fh), 2 high, ((PORTB) and 07Fh), 0,((PORTB) and 07Fh), 1,((PORTB) and 07Fh), 3 low)
+    MOVLW %00001011 ; ((PORTB) and 07Fh), 2=1 active
+    MOVWF PORTB
+    MOVF PORTB, W
+    ANDLW %11110000
+    BTFSC STATUS, 2
+    GOTO Row3Done
+    BTFSC PORTB, 4
+    MOVLW 7
+    BTFSC PORTB, 5
+    MOVLW 8
+    BTFSC PORTB, 6
+    MOVLW 9
+    MOVWF VALUE
+Row3Done:
 
-output:
-    ; Output highest key (or '0') to PORTC, latch with WE
-    MOVLW 0b11111000 ; Clear row bits ((PORTB) and 07Fh), 0 -((PORTB) and 07Fh), 2
-    ANDWF PORTB, F ; Disable all rows for clean state
-    BTFSS KEY, 0 ; Check if any key was pressed
-    GOTO output_zero ; Jump to output '0' if no key
-    MOVF DECIMAL, W ; Load highest key value (1-9)
-    ADDLW 0b00110000 ; Convert to ASCII ('1'-'9')
-    MOVWF ASCII ; Store ASCII code
-    MOVF ASCII, W ; Move ASCII to W for output
-    IORLW 0b10000000 ; Set ((PORTC) and 07Fh), 7=1 (WE inactive)
-    MOVWF PORTC ; Set PORTC with ASCII and WE high
-    BCF PORTC, 7 ; Pull ((PORTC) and 07Fh), 7 low to latch display
-    NOP ; Delay 1 탎 for stable WE pulse
-    NOP ; Extend WE low to ~3 탎 for latching
-    GOTO MainLoop ; Repeat scan loop
+    ; --- Output result ---
+    MOVF VALUE, F ; Check if VALUE is zero
+    BTFSS STATUS, 2 ; If zero flag set, no key pressed
+    GOTO OutputDigit
+    MOVLW 0 ; Force 0 if no key pressed
+    MOVWF VALUE
 
-output_zero:
-    ; Output '0' to PORTC if no key pressed
-    MOVLW 0b00110000 | 0b10000000 ; Load ASCII '0' with ((PORTC) and 07Fh), 7=1
-    MOVWF PORTC ; Set PORTC with '0' and WE high
-    BCF PORTC, 7 ; Pull ((PORTC) and 07Fh), 7 low to latch display
-    NOP ; Delay 1 탎 for stable WE pulse (~2 탎)
-    GOTO MainLoop ; Repeat scan loop
+OutputDigit:
+    MOVF VALUE, W
+    ADDLW 0x30 ; Convert to ASCII
+    MOVWF ASCII
+    BCF ASCII, 7 ; Ensure bit 7 low
+    MOVF ASCII, W
+    MOVWF PORTC
+    GOTO MainLoop
+
+;=================================================================
+; Externally Callable Function: _bar
+; If mixing C and assembly, call this assembly function from a C source file.
+;=================================================================
+    global _bar ; Makes _bar visible to C code
+
+_bar:
+    BCF STATUS, 6
+    BCF STATUS, 5 ; Bank 0
+    MOVF PORTA, W ; Read PORTA into WREG
+    RETURN ; Return to caller (WREG holds result)
 
 ;=================================================================
 ; End of Program
