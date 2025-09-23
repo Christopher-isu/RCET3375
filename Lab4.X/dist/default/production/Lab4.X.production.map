@@ -6,7 +6,7 @@ Linker command line:
   --edf=C:\Program Files\Microchip\xc8\v3.10\pic\dat\20250813170317_en.msgs \
   -cs -h+dist/default/production\Lab4.X.production.sym \
   --cmf=dist/default/production\Lab4.X.production.cmf -z -Q16F883 \
-  -oC:\Users\chris\AppData\Local\Temp\xcAsl7g.0\driver_tmp_3.o \
+  -oC:\Users\chris\AppData\Local\Temp\xcAsnf0.0\driver_tmp_3.o \
   --fixupoverflow=error -ver=XC8 PIC(R) Assembler --fixupoverflow=lstwarn \
   -Mdist/default/production/Lab4.X.production.map -E1 -ACODE=00h-07FFhx2 \
   -ASTRCODE=00h-0FFFh -ASTRING=00h-0FFhx16 -ACONST=00h-0FFhx16 \
@@ -28,13 +28,13 @@ Machine type is 16F883
                 Name                               Link     Load   Length Selector   Space Scale
 build/default/production/timing_delay.o
                 config                             2007     2007        2        0       4
-                resetVect                           7FE      7FE        1      FFC       0
-                code                                7FF      7FF        1      FFE       0
+                resetVect                           7C5      7C5        1      F8A       0
+                code                                7C6      7C6       3A      F8C       0
 
 TOTAL           Name                               Link     Load   Length     Space
         CLASS   CODE           
-                resetVect                           7FE      7FE        1         0
-                code                                7FF      7FF        1         0
+                resetVect                           7C5      7C5        1         0
+                code                                7C6      7C6       3A         0
 
         CLASS   STRCODE        
 
@@ -75,8 +75,8 @@ TOTAL           Name                               Link     Load   Length     Sp
 
 SEGMENTS        Name                           Load    Length   Top    Selector   Space  Class     Delta
 
-                resetVect                      0007FE  000001  0007FF       FFC       0  CODE        2
-                code                           0007FF  000001  000800       FFE       0  CODE        2
+                resetVect                      0007C5  000001  0007C6       F8A       0  CODE        2
+                code                           0007C6  00003A  000800       F8C       0  CODE        2
 
 
 UNUSED ADDRESS RANGES
@@ -85,13 +85,13 @@ UNUSED ADDRESS RANGES
         BANK0            0020-006F             50           1
         BANK1            00A0-00EF             50           1
         BANK2            0120-016F             50           1
-        CODE             0000-07FD            7FE           2
+        CODE             0000-07C4            7C5           2
                          0800-0FFF            800
         COMMON           0070-007F             10           1
-        CONST            0000-07FD            100           2
+        CONST            0000-07C4            100           2
                          0800-0FFF            100
         EEDATA           2100-21FF            100           2
-        ENTRY            0000-07FD            100           2
+        ENTRY            0000-07C4            100           2
                          0800-0FFF            100
         IDLOC            2000-2003              4           2
         RAM              0020-006F             50           1
@@ -101,9 +101,9 @@ UNUSED ADDRESS RANGES
         SFR1             0080-009F             20           1
         SFR2             0100-011F             20           1
         SFR3             0180-01EF             70           1
-        STRCODE          0000-07FD            7FE           2
+        STRCODE          0000-07C4            7C5           2
                          0800-0FFF            800
-        STRING           0000-07FD            100           2
+        STRING           0000-07C4            100           2
                          0800-0FFF            100
 
                                   Symbol Table
