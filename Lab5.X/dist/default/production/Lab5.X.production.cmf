@@ -1,0 +1,313 @@
+%CMF
+# %PSECTS Section
+# For each object file, details of its psects are enumerated here.
+# The begining of the section is indicated by %PSECTS.  The first
+# line indicates the name of the first object file, e.g.
+#    $foo.obj
+# Each line that follows describes a psect in that object file, until
+# the next object file.  The lines that describe a psect have the
+# format:
+#    <psect name> <class name> <space> <link address> <load addresses> <length> <delta> <reloc>
+# All addresses and the length are given in unqualified hexadecimal
+# in delta units.  Any other numeric values are decimal.
+%PSECTS
+$build/default/production/tonegen.o
+code CODE 0 8 8 AF 2 1
+resetVect CODE 0 0 0 1 2 1
+config CONFIG 4 2007 2007 2 2 1
+# %UNUSED Section
+# This section enumerates the unused ranges of each CLASS. Each entry
+# is described on a single line as follows:
+#    <class name> <range> <delta>
+# Addresses given in the range are in hexadecimal and units of delta.
+%UNUSED
+RAM 20-6F 1
+RAM A0-EF 1
+RAM 120-16F 1
+BANK0 20-6F 1
+BANK1 A0-EF 1
+BANK2 120-16F 1
+CONST 1-7 2
+CONST B7-FFF 2
+ENTRY 1-7 2
+ENTRY B7-FFF 2
+IDLOC 2000-2003 2
+CODE 1-7 2
+CODE B7-FFF 2
+SFR0 2-F 1
+SFR3 180-1EF 1
+COMMON 70-7F 1
+EEDATA 2100-21FF 2
+STRCODE 1-7 2
+STRCODE B7-FFF 2
+STRING 1-7 2
+STRING B7-FFF 2
+# %LINETAB Section
+# This section enumerates the file/line to address mappings.
+# The beginning of the section is indicated by %LINETAB.
+# The first line indicates the name of the first object file, e.g.
+#   $foo.obj
+# Each line that follows describes a single mapping until the next
+# object file.  Mappings have the following format:
+#    <address> <psect name> <class name> ><line number>:<file name>
+# The address is absolute and given given in unqualified hex 
+# in delta units of the psect. All mappings within an object file
+# are in ascending order of addresses.
+# All other numeric values are in decimal.
+%LINETAB
+$build/default/production/tonegen.o
+0 resetVect CODE >27:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+8 code CODE >43:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+9 code CODE >44:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A code CODE >45:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+B code CODE >46:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+C code CODE >49:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+D code CODE >50:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+E code CODE >51:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+F code CODE >52:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+10 code CODE >55:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+11 code CODE >56:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+12 code CODE >57:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+13 code CODE >58:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+14 code CODE >61:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+15 code CODE >62:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+16 code CODE >63:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+17 code CODE >64:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+18 code CODE >67:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+19 code CODE >68:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+1A code CODE >69:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+1B code CODE >72:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+1C code CODE >73:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+1D code CODE >74:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+1E code CODE >75:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+1F code CODE >76:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+20 code CODE >77:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+21 code CODE >80:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+22 code CODE >81:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+23 code CODE >82:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+24 code CODE >85:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+25 code CODE >86:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+26 code CODE >87:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+27 code CODE >88:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+28 code CODE >89:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+29 code CODE >90:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+2A code CODE >91:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+2B code CODE >92:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+2C code CODE >93:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+2D code CODE >94:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+2E code CODE >96:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+2F code CODE >97:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+30 code CODE >98:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+31 code CODE >99:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+32 code CODE >100:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+33 code CODE >102:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+34 code CODE >103:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+35 code CODE >104:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+36 code CODE >105:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+37 code CODE >106:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+38 code CODE >108:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+39 code CODE >109:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+3A code CODE >110:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+3B code CODE >111:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+3C code CODE >112:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+3D code CODE >116:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+3E code CODE >117:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+3F code CODE >118:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+40 code CODE >119:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+41 code CODE >120:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+42 code CODE >121:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+43 code CODE >122:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+44 code CODE >123:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+45 code CODE >124:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+46 code CODE >125:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+47 code CODE >127:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+48 code CODE >128:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+49 code CODE >129:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+4A code CODE >130:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+4B code CODE >131:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+4C code CODE >133:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+4D code CODE >134:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+4E code CODE >135:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+4F code CODE >136:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+50 code CODE >137:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+51 code CODE >139:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+52 code CODE >140:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+53 code CODE >141:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+54 code CODE >142:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+55 code CODE >143:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+56 code CODE >147:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+57 code CODE >148:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+58 code CODE >149:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+59 code CODE >150:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+5A code CODE >151:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+5B code CODE >152:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+5C code CODE >153:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+5D code CODE >154:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+5E code CODE >155:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+5F code CODE >156:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+60 code CODE >158:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+61 code CODE >159:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+62 code CODE >160:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+63 code CODE >161:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+64 code CODE >162:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+65 code CODE >164:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+66 code CODE >165:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+67 code CODE >166:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+68 code CODE >167:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+69 code CODE >168:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+6A code CODE >170:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+6B code CODE >171:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+6C code CODE >172:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+6D code CODE >173:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+6E code CODE >174:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+6F code CODE >178:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+70 code CODE >179:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+71 code CODE >180:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+72 code CODE >181:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+73 code CODE >182:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+74 code CODE >183:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+75 code CODE >184:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+76 code CODE >185:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+77 code CODE >186:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+78 code CODE >187:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+79 code CODE >189:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+7A code CODE >190:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+7B code CODE >191:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+7C code CODE >192:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+7D code CODE >193:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+7E code CODE >195:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+7F code CODE >196:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+80 code CODE >197:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+81 code CODE >198:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+82 code CODE >199:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+83 code CODE >201:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+84 code CODE >202:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+85 code CODE >203:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+86 code CODE >204:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+87 code CODE >205:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+88 code CODE >206:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+89 code CODE >209:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+8A code CODE >210:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+8B code CODE >211:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+8C code CODE >212:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+8D code CODE >214:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+8E code CODE >215:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+8F code CODE >216:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+90 code CODE >217:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+91 code CODE >218:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+92 code CODE >220:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+93 code CODE >223:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+94 code CODE >224:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+95 code CODE >226:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+96 code CODE >227:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+97 code CODE >228:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+98 code CODE >229:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+99 code CODE >230:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+9A code CODE >231:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+9B code CODE >237:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+9C code CODE >238:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+9D code CODE >240:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+9E code CODE >241:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+9F code CODE >243:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A0 code CODE >244:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A1 code CODE >245:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A2 code CODE >246:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A3 code CODE >247:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A4 code CODE >248:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A5 code CODE >249:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A6 code CODE >255:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A7 code CODE >256:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A8 code CODE >257:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+A9 code CODE >258:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+AA code CODE >259:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+AB code CODE >260:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+AC code CODE >261:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+AD code CODE >262:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+AE code CODE >263:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+AF code CODE >264:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+B0 code CODE >265:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+B1 code CODE >266:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+B2 code CODE >267:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+B3 code CODE >268:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+B4 code CODE >269:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+B5 code CODE >270:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+B6 code CODE >271:C:\Users\chris\MPLABXProjects\Lab5.X\tonegen.S
+# %SYMTAB Section
+# An enumeration of all symbols in the program.
+# The beginning of the section is indicated by %SYMTAB.
+# Each line describes a single symbol as follows:
+#    <label> <value> [-]<load-adj> <class> <space> <psect> <file-name>
+# The value and load-adj are both in unqualified hexadecimal.
+# All other numeric values are in decimal.  The load-adj is the
+# quantity one needs to add to the symbol value in order to obtain the load
+# address of the symbol.  This value may be signed. If the symbol
+# was defined in a psect then <psect> will be "-". File-name
+# is the name of the object file in which the symbol was defined.
+%SYMTAB
+__Hspace_0 16E 0 ABS 0 - -
+__Hspace_1 0 0 ABS 0 - -
+__Hspace_3 0 0 ABS 0 - -
+__Hspace_4 4010 0 ABS 0 - -
+__Hudata_bank0 16E 0 ABS 0 udata_bank0 -
+__Hudata_bank1 16E 0 ABS 0 udata_bank1 -
+__Hudata_bank2 16E 0 ABS 0 udata_bank2 -
+__L__absolute__ 0 0 ABS 0 __absolute__ -
+__Hedata 16E 0 ABS 0 edata -
+__Hudata 16E 0 ABS 0 udata -
+__Hconfig 4012 0 CONFIG 4 config -
+__Ledata 16E 0 ABS 0 edata -
+__Ludata 16E 0 ABS 0 udata -
+__Hcode 16E 0 CODE 0 code -
+__Hdata 16E 0 ABS 0 data -
+__Lcode 10 0 CODE 0 code -
+__Ldata 16E 0 ABS 0 data -
+__S0 0 0 ABS 0 - -
+__S1 0 0 ABS 0 - -
+__S3 0 0 ABS 0 - -
+__Lconfig 0 0 CONFIG 4 config -
+__Lspace_0 0 0 ABS 0 - -
+__Lspace_1 0 0 ABS 0 - -
+__Lspace_3 0 0 ABS 0 - -
+__Lspace_4 0 0 ABS 0 - -
+__HresetVect 2 0 CODE 0 resetVect -
+__Ludata_bank0 16E 0 ABS 0 udata_bank0 -
+__Ludata_bank1 16E 0 ABS 0 udata_bank1 -
+__Ludata_bank2 16E 0 ABS 0 udata_bank2 -
+__H__absolute__ 0 0 ABS 0 __absolute__ -
+__LresetVect 0 0 CODE 0 resetVect -
+__Hudata_shr 16E 0 ABS 0 udata_shr -
+__Ludata_shr 16E 0 ABS 0 udata_shr -
+# %SPLITSTAB Section
+# This section enumerates all the psect splits performed by the assembler.
+# The beginning of the section is indicated by %SPLITSTAB.
+# Each line is a record a particular split, where the parent psect is on
+# the left and the child on the right.  Note that a child psect is always
+# split form the top of the parent psect. All splits from a given parent
+# are listed in the order in which they occurred.
+%SPLITSTAB
+# %DABS Section
+# This section contains a table of all usuage of the assember
+# directive DABS in the program. Each line has the following format:
+#   <name> <space> <address> <size>
+# If the DABS was originally labelled then that shall be <name>,
+# otherwise name will be "-".  The <space> number is in decimal.
+# <address> and <size> are in byte units as unqaulified hexadecimal
+%DABS
+# %SEGMENTS Section
+# This sections enumerates the segments of the program.  Each segment
+# is described on a single line as follows:
+#    <name> <space> <link address> <file address> <size> <delta>
+# Addresses and size are in unqualified hexadecimal.  The link address
+# and size are in units of delta. The file address is in units of bytes.
+# All other numeric quantities are in decimal.
+%SEGMENTS
+code 0 8 10 AF 2
+resetVect 0 0 0 1 2
+# %NOTES Section
+# This section contains data of all the note-psects.  The beginning of the section
+# is indicated by %NOTES. The first line indicates the name and decimal
+# byte-length of the first note-psect, e.g.
+#   $codecov_info_hdr 16
+# Each line that follows contains the byte-data of the psect in hexadecimal as a
+# space-separated list. These lines are limited to 16 bytes of data.
+%NOTES

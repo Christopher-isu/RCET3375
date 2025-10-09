@@ -80,12 +80,6 @@ Start:
     CLRF  State          ; Initialize State to 0 (start with ASCII '0' output)
 
 ;=================================================================
-; Main Loop
-;=================================================================
-    ; Note: No explicit main loop is implemented; code jumps to PWDelay and loops indefinitely
-    ;       between PWDelay and PSDelay, toggling PORTC and PORTB
-
-;=================================================================
 ; Delay Loop (~500ms at 4 MHz)
 ;=================================================================
 PWDelay:
@@ -95,6 +89,14 @@ PWDelay:
     NOP                  ; No operation (1 cycle, padding for timing)
     NOP                  ; No operation (1 cycle, padding for timing)
     NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)    
     MOVWF Delay3         ; Store in Delay3 (1 cycle)
 OuterLoop:
     MOVLW 0x33           ; Load W with 51 (decimal) for Delay2
@@ -109,7 +111,6 @@ InnerLoop:
     NOP                  ; No operation (1 cycle, padding for timing)
     DECFSZ Delay2        ; Decrement Delay2, skip if zero (1 cycle, 2 if skip)
     GOTO MiddleLoop      ; Loop back to MiddleLoop (2 cycles)
-    NOP                  ; No operation (1 cycle, padding for timing)
     DECFSZ Delay3        ; Decrement Delay3, skip if zero (1 cycle, 2 if skip)
     GOTO OuterLoop       ; Loop back to OuterLoop (2 cycles)
     MOVLW 0x35           ; Load ASCII '5' (0011 0101) for PORTC
@@ -121,7 +122,15 @@ PSDelay:
     ; Initialize outer loop counter (Delay3) for ~500ms delay (identical to PWDelay)
     MOVLW 0x21           ; Load W with 33 (decimal) for Delay3    
     NOP                  ; No operation (1 cycle, padding for timing)
-    NOP                  ; No operation (1 cycle, padding for timing)        
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)
+    NOP                  ; No operation (1 cycle, padding for timing)    
     MOVWF Delay3         ; Store in Delay3 (1 cycle)
 OuterLoop2:
     MOVLW 0x33           ; Load W with 51 (decimal) for Delay2
