@@ -1,7 +1,7 @@
 
 
 Microchip MPLAB XC8 Assembler V3.10 build 20250813170317 
-                                                                                                           Tue Oct  7 15:30:10 2025
+                                                                                                           Thu Oct  9 14:44:26 2025
 
 
      1                           	processor	16F883
@@ -15,7 +15,7 @@ Microchip MPLAB XC8 Assembler V3.10 build 20250813170317
      9                           	psect	data,global,class=STRCODE,space=0,delta=2,noexec
     10                           	psect	edata,global,class=EEDATA,space=3,delta=2,noexec
     11                           	psect	resetVect,global,class=CODE,space=0,delta=2
-    12                           	psect	intVect,global,class=CODE,space=0,delta=2
+    12                           	psect	isrVect,global,class=CODE,space=0,delta=2
     13                           	psect	config,global,abs,ovrld,class=CONFIG,space=4,delta=2,noexec
     14     0000                     INDF            equ	0
     15     0001                     TMR0            equ	1
@@ -2004,204 +2004,152 @@ Microchip MPLAB XC8 Assembler V3.10 build 20250813170317
   1998                           ;=================================================================
   1999                           ; Device Configuration
   2000                           ;=================================================================
-  2001                           ; Configure oscillator and protection settings
-  2002                           
-  2003     0070                     	ds	1
-  2004     0071                     STATUS_TEMP:
-  2005     0071                     	ds	1
-  2006     0072                     COUNTER:
-  2007     0072                     	ds	1
+  2001                           ;=================================================================
+  2002                           ; Data Memory: Shared RAM for ISR context saving
+  2003                           ;=================================================================
+  2004                           
+  2005     0070                     	ds	1	; 1 byte in shared RAM (0x70?0x7F) for W
+  2006     0071                     STATUS_TEMP:
+  2007     0071                     	ds	1	; 1 byte in shared RAM for STATUS
   2008                           
   2009                           	psect	code
-  2010     0060                     MAIN:
-  2011     0060  0187               	clrf	7	; Clear PORTC initially (((PORTC) and 07Fh), 7=0)
-  2012     0061  1303 1683          	banksel	135
-  2013     0063  0187               	clrf	135	; Set PORTC as outputs
-  2014     0064  1406               	bsf	134,0	; Set ((PORTB) and 07Fh), 0 as input
-  2015     0065  1703 1683          	banksel	393
-  2016     0067  1209               	bcf	393,4	; Clear ((ANSELH) and 07Fh), 4 for digital input on ((PORTB) and 07Fh), 0
-  2017     0068  1303 1683          	banksel	129
-  2018     006A  1301               	bcf	129,6	; ((OPTION_REG) and 07Fh), 6=0: falling edge
-  2019     006B  1303 1283          	banksel	6	; Back to bank 0
-  2020                           
-  2021                           ; Initialize display to '1'
-  2022     006D  3031               	movlw	49
-  2023     006E  0087               	movwf	7
-  2024                           
-  2025                           ; Check initial ((PORTB) and 07Fh), 0 state
-  2026     006F  1806               	btfsc	6,0	; If high, enable INT and loop
-  2027     0070  2882               	goto	ENABLE_INT
-  2028                           
-  2029                           ; Else low: treat as pressed, display '7' and start timeout (((INTCON) and 07Fh), 4 remains disabled
-      +                          )
-  2030     0071  3037               	movlw	55
-  2031     0072  0087               	movwf	7
-  2032     0073  3004               	movlw	4
-  2033     0074  00F2               	movwf	COUNTER
-  2034     0075  1303 1283          	banksel	14
-  2035     0077  018E               	clrf	14
-  2036     0078  018F               	clrf	15
-  2037     0079  1303 1683          	banksel	140
-  2038     007B  140C               	bsf	140,0
-  2039     007C  1303 1283          	banksel	16
-  2040     007E  3030               	movlw	48
-  2041     007F  0090               	movwf	16
-  2042     0080  1410               	bsf	16,0
-  2043     0081  2886               	goto	ENABLE_GIE	; Enable ((INTCON) and 07Fh), 7 (((PIE1) and 07Fh), 0 active)
-  2044     0082                     ENABLE_INT:
-  2045     0082  1303 1283          	banksel	11
-  2046     0084  108B               	bcf	11,1	; Clear ((INTCON) and 07Fh), 1
-  2047     0085  160B               	bsf	11,4	; Enable ((INTCON) and 07Fh), 4
-  2048     0086                     ENABLE_GIE:
-  2049     0086  178B               	bsf	11,7	; Enable ((INTCON) and 07Fh), 7
-  2050     0087                     LOOP:
-  2051     0087  2887               	goto	LOOP	; Idle loop (interrupts handle everything)
-  2052                           
-  2053                           	psect	edata
-  2054     0000                     stk_offset      set	0
-  2055     0000                     auto_size       set	0
-  2056                           
-  2057                           ; stack_auto defines a symbol /name/_offset which equates to the
-  2058                           ; stack offset of the auto object in question
-  2059     0000                     
-  2060                           ; stack_param defines a symbol /name/_offset which equates to the
-  2061                           ; stack offset of the parameter object in question
-  2062     0000                     
-  2063                           ; alloc_stack adjusts the SP to allocate space for auto objects
-  2064                           ; it also links in to the btemp symbol so that can be used
-  2065     0000                     
-  2066                           ; restore_stack adjusts the SP to remove all auto and parameter
-  2067                           ; objects from the stack prior to returning from a function
-  2068     0000                     	; Disable Flash write protection for full memory access
-  2069                           
-  2070                           	psect	resetVect
-  2071     0000                     resetVect:
-  2072     0000  2860               	goto	MAIN
-  2073                           
-  2074                           	psect	intVect
-  2075     0004  00F0               	movwf	W_TEMP
-  2076     0005  0E03               	swapf	3,w
-  2077     0006  00F1               	movwf	STATUS_TEMP
-  2078                           
-  2079                           ; Check interrupt sources
-  2080     0007  1303 1283          	banksel	11
-  2081     0009  188B               	btfsc	11,1	; ((INTCON) and 07Fh), 1 set?
-  2082     000A  2810               	goto	HANDLE_INT
-  2083     000B  1303 1283          	banksel	12
-  2084     000D  180C               	btfsc	12,0	; ((PIR1) and 07Fh), 0 set?
-  2085     000E  2829               	goto	HANDLE_TMR1
-  2086     000F  284F               	goto	ISR_END	; Unexpected, exit
-  2087     0010                     HANDLE_INT:
-  2088     0010  1303 1283          	banksel	11
-  2089     0012  108B               	bcf	11,1	; Clear ((INTCON) and 07Fh), 1
-  2090     0013  120B               	bcf	11,4	; Disable ((INTCON) and 07Fh), 4 during timeout
-  2091     0014  1303 1283          	banksel	7
-  2092     0016  3037               	movlw	55	; Display '7'
-  2093     0017  0087               	movwf	7
-  2094                           
-  2095                           ; Start Timer1 for 2s
-  2096     0018  1303  1283         	banksel	COUNTER
-  2097     001A  3004               	movlw	4	; 3 full + 1 partial overflow
-  2098     001B  00F2               	movwf	COUNTER
-  2099     001C  1303 1283          	banksel	14
-  2100     001E  018E               	clrf	14
-  2101     001F  018F               	clrf	15
-  2102     0020  1303 1683          	banksel	140
-  2103     0022  140C               	bsf	140,0	; Enable ((PIE1) and 07Fh), 0
-  2104     0023  1303 1283          	banksel	16
-  2105     0025  3030               	movlw	48	; Prescaler 1:8, internal clock
-  2106     0026  0090               	movwf	16
-  2107     0027  1410               	bsf	16,0	; Enable TMR1
-  2108     0028  284F               	goto	ISR_END
-  2109     0029                     HANDLE_TMR1:
-  2110     0029  1303 1283          	banksel	12
-  2111     002B  100C               	bcf	12,0	; Clear ((PIR1) and 07Fh), 0
-  2112     002C  1303  1283         	banksel	COUNTER
-  2113     002E  03F2               	decf	COUNTER,f
-  2114     002F  0872               	movf	COUNTER,w
-  2115     0030  1903               	btfsc	3,2	; Check if COUNTER == 0 (Zero flag)
-  2116     0031  2841               	goto	TIMEOUT	; If COUNTER == 0, timeout
-  2117     0032  0872               	movf	COUNTER,w	; Reload W with updated counter
-  2118     0033  3001               	movlw	1
-  2119     0034  0272               	subwf	COUNTER,w	; COUNTER - 1
-  2120     0035  1903               	btfsc	3,2	; Check if COUNTER == 1 (Zero flag)
-  2121     0036  283A               	goto	SET_PARTIAL	; If COUNTER == 1, set partial preload
-  2122                           
-  2123                           ; Else: full overflow again
-  2124     0037  018E               	clrf	14
-  2125     0038  018F               	clrf	15
-  2126     0039  284F               	goto	ISR_END
-  2127     003A                     SET_PARTIAL:
-  2128     003A  1303 1283          	banksel	14
-  2129     003C  3070               	movlw	112	; Low byte of 12144 (65536 - 53392)
-  2130     003D  008E               	movwf	14
-  2131     003E  302F               	movlw	47	; High byte
-  2132     003F  008F               	movwf	15
-  2133     0040  284F               	goto	ISR_END
-  2134     0041                     TIMEOUT:
-  2135     0041  1303 1283          	banksel	16
-  2136     0043  1010               	bcf	16,0	; Disable TMR1
-  2137     0044  1303 1683          	banksel	140
-  2138     0046  100C               	bcf	140,0	; Disable ((PIE1) and 07Fh), 0
-  2139     0047  1303 1283          	banksel	7
-  2140     0049  3031               	movlw	49	; Display '1'
-  2141     004A  0087               	movwf	7
-  2142     004B  1303 1283          	banksel	11
-  2143     004D  160B               	bsf	11,4	; Re-enable ((INTCON) and 07Fh), 4
-  2144     004E  284F               	goto	ISR_END
-  2145     004F                     ISR_END:
-  2146     004F  0E71               	swapf	STATUS_TEMP,w
-  2147     0050  0083               	movwf	3
-  2148     0051  0EF0               	swapf	W_TEMP,f
-  2149     0052  0E70               	swapf	W_TEMP,w
-  2150     0053  0009               	retfie
-  2151                           
-  2152                           	psect	config
-  2153                           
-  2154                           ;Config register CONFIG1 @ 0x2007
-  2155                           ;	Oscillator Selection bits
-  2156                           ;	FOSC = XT, XT oscillator: Crystal/resonator on RA6/OSC2/CLKOUT and RA7/OSC1/CLKIN
-  2157                           ;	Watchdog Timer Enable bit
-  2158                           ;	WDTE = OFF, WDT disabled and can be enabled by SWDTEN bit of the WDTCON register
-  2159                           ;	Power-up Timer Enable bit
-  2160                           ;	PWRTE = OFF, PWRT disabled
-  2161                           ;	RE3/MCLR pin function select bit
-  2162                           ;	MCLRE = ON, RE3/MCLR pin function is MCLR
-  2163                           ;	Code Protection bit
-  2164                           ;	CP = OFF, Program memory code protection is disabled
-  2165                           ;	Data Code Protection bit
-  2166                           ;	CPD = OFF, Data memory code protection is disabled
-  2167                           ;	Brown Out Reset Selection bits
-  2168                           ;	BOREN = OFF, BOR disabled
-  2169                           ;	Internal External Switchover bit
-  2170                           ;	IESO = OFF, Internal/External Switchover mode is disabled
-  2171                           ;	Fail-Safe Clock Monitor Enabled bit
-  2172                           ;	FCMEN = OFF, Fail-Safe Clock Monitor is disabled
-  2173                           ;	Low Voltage Programming Enable bit
-  2174                           ;	LVP = OFF, RB3 pin has digital I/O, HV on MCLR must be used for programming
-  2175                           ;	In-Circuit Debugger Mode bit
-  2176                           ;	DEBUG = 0x1, unprogrammed default
-  2177     2007                     	org	8199
-  2178     2007  20F1               	dw	8433
-  2179                           
-  2180                           ;Config register CONFIG2 @ 0x2008
-  2181                           ;	Brown-out Reset Selection bit
-  2182                           ;	BOR4V = 0x1, unprogrammed default
-  2183                           ;	Flash Program Memory Self Write Enable bits
-  2184                           ;	WRT = OFF, Write protection off
-  2185     2008                     	org	8200
-  2186     2008  3FFF               	dw	16383
+  2010     0020                     isrCode:	
+  2011                           ; Total: 4 words, fits in 0x0004?0x0007
+  2012                           ;=================================================================
+  2013                           ; ISR Logic: Placed at 0x0008 as part of code psect (-Wl,-pcode=8h)
+  2014                           ;=================================================================
+  2015                           
+  2016     0020  1303 1283          	banksel	6	; Select Bank 0 for PORTB (1 word)
+  2017     0022  0806               	movf	6,w	; Read PORTB to clear IOC mismatch (1 word)
+  2018     0023  1806               	btfsc	6,0	; Check ((PORTB) and 07Fh), 0 state (1 word)
+  2019     0024  2828               	goto	RB0_HIGH	; ((PORTB) and 07Fh), 0 high: display '1' (1 word)
+  2020     0025  3037               	movlw	55	; ((PORTB) and 07Fh), 0 low: display '7' (1 word)
+  2021     0026  0087               	movwf	7	; Output to PORTC (1 word)
+  2022     0027  282A               	goto	CLEAR_IOC	; (1 word)
+  2023     0028                     RB0_HIGH:
+  2024     0028  3031               	movlw	49	; ((PORTB) and 07Fh), 0 high: display '1' (1 word)
+  2025     0029  0087               	movwf	7	; Output to PORTC (1 word)
+  2026     002A                     CLEAR_IOC:
+  2027     002A  1303 1283          	banksel	11	; Select Bank 0 for INTCON (1 word)
+  2028     002C  100B               	bcf	11,0	; Clear IOC flag (1 word)
+  2029     002D  0E71               	swapf	STATUS_TEMP,w	; Restore STATUS (1 word)
+  2030     002E  0083               	movwf	3	; (1 word)
+  2031     002F  0EF0               	swapf	W_TEMP,f	; Restore W (1 word)
+  2032     0030  0E70               	swapf	W_TEMP,w	; (1 word)
+  2033     0031  0009               	retfie	; Return from interrupt (1 word)
+  2034     0032                     MAIN:	
+  2035                           ; Total: ~14 words
+  2036                           ;=================================================================
+  2037                           ; Main Program: Placed after ISR logic in code psect (-Wl,-pcode=8h)
+  2038                           ;=================================================================
+  2039                           
+  2040     0032  0187               	clrf	7	; Clear PORTC initially (1 word)
+  2041     0033  1303 1683          	banksel	135
+  2042     0035  0187               	clrf	135	; Set PORTC as outputs (1 word)
+  2043     0036  1406               	bsf	134,0	; Set ((PORTB) and 07Fh), 0 as input (1 word)
+  2044     0037  1703 1683          	banksel	393
+  2045     0039  1209               	bcf	393,4	; Clear ((ANSELH) and 07Fh), 4 for digital input on ((PORTB) and 07Fh), 0 (1 word)
+  2046     003A  1303 1683          	banksel	150
+  2047     003C  1416               	bsf	150,0	; Enable IOC on ((PORTB) and 07Fh), 0 (1 word)
+  2048     003D  1303 1283          	banksel	6	; Read PORTB to clear initial mismatch (1 word)
+  2049     003F  0806               	movf	6,w	; (1 word)
+  2050     0040  1303 1283          	banksel	11
+  2051     0042  100B               	bcf	11,0	; Clear IOC flag (1 word)
+  2052     0043  158B               	bsf	11,3	; Enable IOCIE (IOC interrupt) (1 word)
+  2053     0044  178B               	bsf	11,7	; Enable ((INTCON) and 07Fh), 7 (global interrupts) (1 word)
+  2054                           
+  2055                           ; Initialize display based on initial ((PORTB) and 07Fh), 0 state
+  2056     0045  1303 1283          	banksel	6
+  2057     0047  1C06               	btfss	6,0	; Check ((PORTB) and 07Fh), 0 state (1 word)
+  2058     0048  284C               	goto	INIT_LOW	; (1 word)
+  2059     0049  3031               	movlw	49	; ((PORTB) and 07Fh), 0 high: display '1' (1 word)
+  2060     004A  0087               	movwf	7	; (1 word)
+  2061     004B  284E               	goto	LOOP	; (1 word)
+  2062     004C                     INIT_LOW:
+  2063     004C  3037               	movlw	55	; ((PORTB) and 07Fh), 0 low: display '7' (1 word)
+  2064     004D  0087               	movwf	7	; (1 word)
+  2065     004E                     LOOP:
+  2066     004E  284E               	goto	LOOP	; Idle loop (1 word)
+  2067                           
+  2068                           	psect	edata
+  2069     0000                     stk_offset      set	0
+  2070     0000                     auto_size       set	0
+  2071                           
+  2072                           ; stack_auto defines a symbol /name/_offset which equates to the
+  2073                           ; stack offset of the auto object in question
+  2074     0000                     
+  2075                           ; stack_param defines a symbol /name/_offset which equates to the
+  2076                           ; stack offset of the parameter object in question
+  2077     0000                     
+  2078                           ; alloc_stack adjusts the SP to allocate space for auto objects
+  2079                           ; it also links in to the btemp symbol so that can be used
+  2080     0000                     
+  2081                           ; restore_stack adjusts the SP to remove all auto and parameter
+  2082                           ; objects from the stack prior to returning from a function
+  2083     0000                     	; Disable Flash write protection
+  2084                           
+  2085                           	psect	resetVect
+  2086     0000                     resetVect:	
+  2087                           ;=================================================================
+  2088                           ; Reset Vector: Placed at 0x0000 (-Wl,-presetVect=0h)
+  2089                           ;=================================================================
+  2090                           
+  2091     0000  2832               	goto	MAIN	; Jump to main program
+  2092                           
+  2093                           	psect	isrVect
+  2094     0004                     isrVect:	
+  2095                           ;=================================================================
+  2096                           ; Interrupt Vector: Placed at 0x0004 (-Wl,-pisrVect=4h)
+  2097                           ;=================================================================
+  2098                           
+  2099     0004  00F0               	movwf	W_TEMP	; Save W register (1 word)
+  2100     0005  0E03               	swapf	3,w	; Save STATUS without altering flags (1 word)
+  2101     0006  00F1               	movwf	STATUS_TEMP	; Store STATUS (1 word)
+  2102     0007  2820               	goto	isrCode	; Jump to ISR logic (1 word)
+  2103                           
+  2104                           	psect	config
+  2105                           
+  2106                           ;Config register CONFIG1 @ 0x2007
+  2107                           ;	Oscillator Selection bits
+  2108                           ;	FOSC = XT, XT oscillator: Crystal/resonator on RA6/OSC2/CLKOUT and RA7/OSC1/CLKIN
+  2109                           ;	Watchdog Timer Enable bit
+  2110                           ;	WDTE = OFF, WDT disabled and can be enabled by SWDTEN bit of the WDTCON register
+  2111                           ;	Power-up Timer Enable bit
+  2112                           ;	PWRTE = OFF, PWRT disabled
+  2113                           ;	RE3/MCLR pin function select bit
+  2114                           ;	MCLRE = ON, RE3/MCLR pin function is MCLR
+  2115                           ;	Code Protection bit
+  2116                           ;	CP = OFF, Program memory code protection is disabled
+  2117                           ;	Data Code Protection bit
+  2118                           ;	CPD = OFF, Data memory code protection is disabled
+  2119                           ;	Brown Out Reset Selection bits
+  2120                           ;	BOREN = OFF, BOR disabled
+  2121                           ;	Internal External Switchover bit
+  2122                           ;	IESO = OFF, Internal/External Switchover mode is disabled
+  2123                           ;	Fail-Safe Clock Monitor Enabled bit
+  2124                           ;	FCMEN = OFF, Fail-Safe Clock Monitor is disabled
+  2125                           ;	Low Voltage Programming Enable bit
+  2126                           ;	LVP = OFF, RB3 pin has digital I/O, HV on MCLR must be used for programming
+  2127                           ;	In-Circuit Debugger Mode bit
+  2128                           ;	DEBUG = 0x1, unprogrammed default
+  2129     2007                     	org	8199
+  2130     2007  20F1               	dw	8433
+  2131                           
+  2132                           ;Config register CONFIG2 @ 0x2008
+  2133                           ;	Brown-out Reset Selection bit
+  2134                           ;	BOR4V = 0x1, unprogrammed default
+  2135                           ;	Flash Program Memory Self Write Enable bits
+  2136                           ;	WRT = OFF, Write protection off
+  2137     2008                     	org	8200
+  2138     2008  3FFF               	dw	16383
 
 
 Microchip Technology PIC Macro Assembler V3.10 build 20250813170317 
-Symbol Table                                                                                               Tue Oct  7 15:30:10 2025
+Symbol Table                                                                                               Thu Oct  9 14:44:26 2025
 
-                         MAIN 0060                           PIE1 008C                           PIR1 000C  
-                         LOOP 0087                          T1CON 0010                          TMR1H 000F  
-                        TMR1L 000E                          PORTB 0006                          PORTC 0007  
-                        TRISB 0086                          TRISC 0087                         ANSELH 0189  
-                       INTCON 000B                         STATUS 0003                         W_TEMP 0070  
-                      COUNTER 0072                        ISR_END 004F                        TIMEOUT 0041  
-                   ENABLE_GIE 0086                     ENABLE_INT 0082                     HANDLE_INT 0010  
-                   OPTION_REG 0081                    HANDLE_TMR1 0029                    SET_PARTIAL 003A  
-                  STATUS_TEMP 0071                      resetVect 0000  
+                         MAIN 0032                           IOCB 0096                           LOOP 004E  
+                        PORTB 0006                          PORTC 0007                          TRISB 0086  
+                        TRISC 0087                         ANSELH 0189                         INTCON 000B  
+                       STATUS 0003                         W_TEMP 0070                        isrCode 0020  
+                      isrVect 0004                       RB0_HIGH 0028                       INIT_LOW 004C  
+                    CLEAR_IOC 002A                    STATUS_TEMP 0071                      resetVect 0000  
