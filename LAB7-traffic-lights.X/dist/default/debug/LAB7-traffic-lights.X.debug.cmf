@@ -1,0 +1,311 @@
+%CMF
+# %PSECTS Section
+# For each object file, details of its psects are enumerated here.
+# The begining of the section is indicated by %PSECTS.  The first
+# line indicates the name of the first object file, e.g.
+#    $foo.obj
+# Each line that follows describes a psect in that object file, until
+# the next object file.  The lines that describe a psect have the
+# format:
+#    <psect name> <class name> <space> <link address> <load addresses> <length> <delta> <reloc>
+# All addresses and the length are given in unqualified hexadecimal
+# in delta units.  Any other numeric values are decimal.
+%PSECTS
+$build/default/debug/traffic_lights.o
+udata RAM 1 20 20 7 1 1
+code CODE 0 20 20 D6 2 1
+resetVect CODE 0 0 0 1 2 1
+isrVect CODE 0 4 4 5 2 1
+config CONFIG 4 2007 2007 2 2 1
+# %UNUSED Section
+# This section enumerates the unused ranges of each CLASS. Each entry
+# is described on a single line as follows:
+#    <class name> <range> <delta>
+# Addresses given in the range are in hexadecimal and units of delta.
+%UNUSED
+RAM 27-6F 1
+RAM A0-EF 1
+RAM 120-16F 1
+BANK0 27-6F 1
+BANK1 A0-EF 1
+BANK2 120-16F 1
+CONST 1-3 2
+CONST 9-1F 2
+CONST F6-FFF 2
+ENTRY 1-3 2
+ENTRY 9-1F 2
+ENTRY F6-FFF 2
+IDLOC 2000-2003 2
+CODE 1-3 2
+CODE 9-1F 2
+CODE F6-FFF 2
+SFR0 2-7 1
+SFR0 12-1F 1
+SFR3 1EC-1EF 1
+COMMON 70-7F 1
+EEDATA 2100-21FF 2
+STRCODE 1-3 2
+STRCODE 9-1F 2
+STRCODE F6-FFF 2
+STRING 1-3 2
+STRING 9-1F 2
+STRING F6-FFF 2
+# %LINETAB Section
+# This section enumerates the file/line to address mappings.
+# The beginning of the section is indicated by %LINETAB.
+# The first line indicates the name of the first object file, e.g.
+#   $foo.obj
+# Each line that follows describes a single mapping until the next
+# object file.  Mappings have the following format:
+#    <address> <psect name> <class name> ><line number>:<file name>
+# The address is absolute and given given in unqualified hex 
+# in delta units of the psect. All mappings within an object file
+# are in ascending order of addresses.
+# All other numeric values are in decimal.
+%LINETAB
+$build/default/debug/traffic_lights.o
+8 isrVect CODE >42:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+0 resetVect CODE >37:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+40 code CODE >50:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+42 code CODE >51:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+43 code CODE >52:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+45 code CODE >53:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+46 code CODE >54:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+47 code CODE >56:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+49 code CODE >57:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+4A code CODE >58:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+4B code CODE >60:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+4D code CODE >61:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+4E code CODE >62:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+4F code CODE >64:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+51 code CODE >65:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+52 code CODE >66:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+53 code CODE >68:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+55 code CODE >69:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+56 code CODE >70:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+57 code CODE >72:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+59 code CODE >73:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+5A code CODE >74:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+5B code CODE >76:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+5D code CODE >77:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+5E code CODE >78:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+5F code CODE >79:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+60 code CODE >80:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+61 code CODE >81:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+62 code CODE >82:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+63 code CODE >83:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+64 code CODE >86:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+65 code CODE >87:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+66 code CODE >91:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+67 code CODE >92:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+68 code CODE >93:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+6A code CODE >94:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+6B code CODE >96:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+6C code CODE >97:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+6D code CODE >99:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+6E code CODE >100:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+6F code CODE >102:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+71 code CODE >103:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+72 code CODE >104:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+73 code CODE >105:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+74 code CODE >106:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+75 code CODE >110:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+76 code CODE >112:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+77 code CODE >113:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+78 code CODE >114:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+79 code CODE >115:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+7A code CODE >116:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+7B code CODE >118:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+7C code CODE >120:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+7D code CODE >121:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+7E code CODE >123:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+80 code CODE >124:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+81 code CODE >125:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+82 code CODE >126:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+83 code CODE >127:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+84 code CODE >128:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+85 code CODE >129:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+86 code CODE >130:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+87 code CODE >131:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+88 code CODE >133:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+8A code CODE >134:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+8B code CODE >136:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+8C code CODE >137:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+8D code CODE >140:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+8F code CODE >141:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+90 code CODE >142:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+92 code CODE >143:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+93 code CODE >144:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+94 code CODE >147:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+96 code CODE >148:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+97 code CODE >149:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+99 code CODE >150:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+9A code CODE >151:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+9B code CODE >155:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+9D code CODE >156:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+9E code CODE >157:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+9F code CODE >158:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+A0 code CODE >160:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+A2 code CODE >161:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+A3 code CODE >162:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+A4 code CODE >163:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+A5 code CODE >164:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+A6 code CODE >165:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+A7 code CODE >166:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+A8 code CODE >167:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+A9 code CODE >169:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+AA code CODE >170:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+AB code CODE >172:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+AC code CODE >173:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+AD code CODE >175:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+AE code CODE >176:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+AF code CODE >178:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+B0 code CODE >179:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+B1 code CODE >181:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+B2 code CODE >182:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+B3 code CODE >184:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+B5 code CODE >185:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+B6 code CODE >186:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+B7 code CODE >190:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+B9 code CODE >191:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+BA code CODE >192:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+BB code CODE >193:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+BC code CODE >194:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+BD code CODE >195:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+BE code CODE >196:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+BF code CODE >197:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C0 code CODE >198:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C1 code CODE >199:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C2 code CODE >200:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C3 code CODE >201:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C4 code CODE >202:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C5 code CODE >203:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C6 code CODE >204:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C7 code CODE >205:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C8 code CODE >206:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+C9 code CODE >208:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+CA code CODE >210:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+CB code CODE >211:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+CC code CODE >212:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+CD code CODE >213:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+CE code CODE >214:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+CF code CODE >216:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D0 code CODE >217:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D1 code CODE >218:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D2 code CODE >219:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D3 code CODE >220:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D4 code CODE >221:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D5 code CODE >223:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D6 code CODE >224:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D7 code CODE >225:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D8 code CODE >226:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+D9 code CODE >227:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+DA code CODE >229:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+DB code CODE >230:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+DC code CODE >231:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+DD code CODE >232:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+DE code CODE >233:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+DF code CODE >235:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E0 code CODE >236:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E1 code CODE >237:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E2 code CODE >238:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E3 code CODE >239:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E4 code CODE >240:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E5 code CODE >242:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E6 code CODE >243:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E7 code CODE >244:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E8 code CODE >245:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+E9 code CODE >246:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+EA code CODE >249:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+EC code CODE >251:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+ED code CODE >252:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+EE code CODE >253:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+EF code CODE >254:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+F0 code CODE >255:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+F2 code CODE >256:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+F3 code CODE >257:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+F4 code CODE >258:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+F5 code CODE >259:C:\Users\chris\MPLABXProjects\LAB7-traffic-lights.X\traffic_lights.S
+# %SYMTAB Section
+# An enumeration of all symbols in the program.
+# The beginning of the section is indicated by %SYMTAB.
+# Each line describes a single symbol as follows:
+#    <label> <value> [-]<load-adj> <class> <space> <psect> <file-name>
+# The value and load-adj are both in unqualified hexadecimal.
+# All other numeric values are in decimal.  The load-adj is the
+# quantity one needs to add to the symbol value in order to obtain the load
+# address of the symbol.  This value may be signed. If the symbol
+# was defined in a psect then <psect> will be "-". File-name
+# is the name of the object file in which the symbol was defined.
+%SYMTAB
+__Hspace_0 1EC 0 ABS 0 - -
+__Hspace_1 27 0 ABS 0 - -
+__Hspace_3 0 0 ABS 0 - -
+__Hspace_4 4010 0 ABS 0 - -
+__HisrVect 12 0 CODE 0 isrVect -
+__Hudata_bank0 1EC 0 ABS 0 udata_bank0 -
+__Hudata_bank1 1EC 0 ABS 0 udata_bank1 -
+__Hudata_bank2 1EC 0 ABS 0 udata_bank2 -
+__L__absolute__ 0 0 ABS 0 __absolute__ -
+__Hedata 1EC 0 ABS 0 edata -
+__Hudata 1EC 0 ABS 0 udata -
+__Hconfig 4012 0 CONFIG 4 config -
+__Ledata 1EC 0 ABS 0 edata -
+__Ludata 1EC 0 ABS 0 udata -
+__Hcode 1EC 0 CODE 0 code -
+__Hdata 1EC 0 ABS 0 data -
+__Lcode 40 0 CODE 0 code -
+__Ldata 1EC 0 ABS 0 data -
+__S0 0 0 ABS 0 - -
+__S1 27 0 ABS 0 - -
+__S3 0 0 ABS 0 - -
+__Lconfig 0 0 CONFIG 4 config -
+__Lspace_0 0 0 ABS 0 - -
+__Lspace_1 0 0 ABS 0 - -
+__Lspace_3 0 0 ABS 0 - -
+__Lspace_4 0 0 ABS 0 - -
+__LisrVect 8 0 CODE 0 isrVect -
+__HresetVect 2 0 CODE 0 resetVect -
+__Ludata_bank0 1EC 0 ABS 0 udata_bank0 -
+__Ludata_bank1 1EC 0 ABS 0 udata_bank1 -
+__Ludata_bank2 1EC 0 ABS 0 udata_bank2 -
+__H__absolute__ 0 0 ABS 0 __absolute__ -
+__LresetVect 0 0 CODE 0 resetVect -
+__Hudata_shr 1EC 0 ABS 0 udata_shr -
+__Ludata_shr 1EC 0 ABS 0 udata_shr -
+# %SPLITSTAB Section
+# This section enumerates all the psect splits performed by the assembler.
+# The beginning of the section is indicated by %SPLITSTAB.
+# Each line is a record a particular split, where the parent psect is on
+# the left and the child on the right.  Note that a child psect is always
+# split form the top of the parent psect. All splits from a given parent
+# are listed in the order in which they occurred.
+%SPLITSTAB
+# %DABS Section
+# This section contains a table of all usuage of the assember
+# directive DABS in the program. Each line has the following format:
+#   <name> <space> <address> <size>
+# If the DABS was originally labelled then that shall be <name>,
+# otherwise name will be "-".  The <space> number is in decimal.
+# <address> and <size> are in byte units as unqaulified hexadecimal
+%DABS
+# %SEGMENTS Section
+# This sections enumerates the segments of the program.  Each segment
+# is described on a single line as follows:
+#    <name> <space> <link address> <file address> <size> <delta>
+# Addresses and size are in unqualified hexadecimal.  The link address
+# and size are in units of delta. The file address is in units of bytes.
+# All other numeric quantities are in decimal.
+%SEGMENTS
+udata 1 20 20 7 1
+code 0 20 40 D6 2
+resetVect 0 0 0 1 2
+isrVect 0 4 8 5 2
+# %NOTES Section
+# This section contains data of all the note-psects.  The beginning of the section
+# is indicated by %NOTES. The first line indicates the name and decimal
+# byte-length of the first note-psect, e.g.
+#   $codecov_info_hdr 16
+# Each line that follows contains the byte-data of the psect in hexadecimal as a
+# space-separated list. These lines are limited to 16 bytes of data.
+%NOTES
