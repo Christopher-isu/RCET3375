@@ -30,12 +30,12 @@ ifeq ($(TYPE_IMAGE), DEBUG_RUN)
 IMAGE_TYPE=debug
 OUTPUT_SUFFIX=hex
 DEBUGGABLE_SUFFIX=elf
-FINAL_IMAGE=${DISTDIR}/LAB7-traffic-lights.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
+FINAL_IMAGE=${DISTDIR}/LAB9-Serial.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
 else
 IMAGE_TYPE=production
 OUTPUT_SUFFIX=hex
 DEBUGGABLE_SUFFIX=elf
-FINAL_IMAGE=${DISTDIR}/LAB7-traffic-lights.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
+FINAL_IMAGE=${DISTDIR}/LAB9-Serial.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
 endif
 
 ifeq ($(COMPARE_BUILD), true)
@@ -51,17 +51,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=traffic_lights.S
+SOURCEFILES_QUOTED_IF_SPACED=serial_comm.S
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/traffic_lights.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/traffic_lights.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/serial_comm.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/serial_comm.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/traffic_lights.o
+OBJECTFILES=${OBJECTDIR}/serial_comm.o
 
 # Source Files
-SOURCEFILES=traffic_lights.S
+SOURCEFILES=serial_comm.S
 
 
 
@@ -82,46 +82,46 @@ FIXDEPS=fixDeps
 ifneq ($(INFORMATION_MESSAGE), )
 	@echo $(INFORMATION_MESSAGE)
 endif
-	${MAKE}  -f nbproject/Makefile-default.mk ${DISTDIR}/LAB7-traffic-lights.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
+	${MAKE}  -f nbproject/Makefile-default.mk ${DISTDIR}/LAB9-Serial.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
 
 MP_PROCESSOR_OPTION=PIC16F883
-FINAL_IMAGE_NAME_MINUS_EXTENSION=${DISTDIR}/LAB7-traffic-lights.X.${IMAGE_TYPE}
+FINAL_IMAGE_NAME_MINUS_EXTENSION=${DISTDIR}/LAB9-Serial.X.${IMAGE_TYPE}
 # ------------------------------------------------------------------------------------
 # Rules for buildStep: pic-as-assembler
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
-${OBJECTDIR}/traffic_lights.o: traffic_lights.S  nbproject/Makefile-${CND_CONF}.mk 
+${OBJECTDIR}/serial_comm.o: serial_comm.S  nbproject/Makefile-${CND_CONF}.mk 
 	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/traffic_lights.o 
+	@${RM} ${OBJECTDIR}/serial_comm.o 
 	${MP_AS} -mcpu=PIC16F883 -c \
-	-o ${OBJECTDIR}/traffic_lights.o \
-	traffic_lights.S \
-	 -D__DEBUG=1   -mdfp="${DFP_DIR}/xc8"  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -fmax-errors=20 -mwarn=0 -xassembler-with-cpp -Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pcode=20h
+	-o ${OBJECTDIR}/serial_comm.o \
+	serial_comm.S \
+	 -D__DEBUG=1   -mdfp="${DFP_DIR}/xc8"  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -fmax-errors=20 -mwarn=0 -xassembler-with-cpp -Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pisrCode=8h,-pcode=20h
 	
 else
-${OBJECTDIR}/traffic_lights.o: traffic_lights.S  nbproject/Makefile-${CND_CONF}.mk 
+${OBJECTDIR}/serial_comm.o: serial_comm.S  nbproject/Makefile-${CND_CONF}.mk 
 	@${MKDIR} "${OBJECTDIR}" 
-	@${RM} ${OBJECTDIR}/traffic_lights.o 
+	@${RM} ${OBJECTDIR}/serial_comm.o 
 	${MP_AS} -mcpu=PIC16F883 -c \
-	-o ${OBJECTDIR}/traffic_lights.o \
-	traffic_lights.S \
-	  -mdfp="${DFP_DIR}/xc8"  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -fmax-errors=20 -mwarn=0 -xassembler-with-cpp -Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pcode=20h
+	-o ${OBJECTDIR}/serial_comm.o \
+	serial_comm.S \
+	  -mdfp="${DFP_DIR}/xc8"  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -fmax-errors=20 -mwarn=0 -xassembler-with-cpp -Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pisrCode=8h,-pcode=20h
 	
 endif
 
 # ------------------------------------------------------------------------------------
 # Rules for buildStep: pic-as-linker
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
-${DISTDIR}/LAB7-traffic-lights.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}: ${OBJECTFILES}  nbproject/Makefile-${CND_CONF}.mk    
+${DISTDIR}/LAB9-Serial.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}: ${OBJECTFILES}  nbproject/Makefile-${CND_CONF}.mk    
 	@${MKDIR} ${DISTDIR} 
 	${MP_LD} -mcpu=PIC16F883 ${OBJECTFILES_QUOTED_IF_SPACED} \
-	-o ${DISTDIR}/LAB7-traffic-lights.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX} \
-	 -D__DEBUG=1   -mdfp="${DFP_DIR}/xc8"  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -mcallgraph=std -Wl,-Map=${FINAL_IMAGE_NAME_MINUS_EXTENSION}.map -mno-download-hex -Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pcode=20h
+	-o ${DISTDIR}/LAB9-Serial.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX} \
+	 -D__DEBUG=1   -mdfp="${DFP_DIR}/xc8"  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -mcallgraph=std -Wl,-Map=${FINAL_IMAGE_NAME_MINUS_EXTENSION}.map -mno-download-hex -Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pisrCode=8h,-pcode=20h
 else
-${DISTDIR}/LAB7-traffic-lights.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}: ${OBJECTFILES}  nbproject/Makefile-${CND_CONF}.mk   
+${DISTDIR}/LAB9-Serial.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}: ${OBJECTFILES}  nbproject/Makefile-${CND_CONF}.mk   
 	@${MKDIR} ${DISTDIR} 
 	${MP_LD} -mcpu=PIC16F883 ${OBJECTFILES_QUOTED_IF_SPACED} \
-	-o ${DISTDIR}/LAB7-traffic-lights.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX} \
-	  -mdfp="${DFP_DIR}/xc8"  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -mcallgraph=std -Wl,-Map=${FINAL_IMAGE_NAME_MINUS_EXTENSION}.map -mno-download-hex -Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pcode=20h
+	-o ${DISTDIR}/LAB9-Serial.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX} \
+	  -mdfp="${DFP_DIR}/xc8"  -msummary=+mem,-psect,-class,-hex,-file,-sha1,-sha256,-xml,-xmlfull -mcallgraph=std -Wl,-Map=${FINAL_IMAGE_NAME_MINUS_EXTENSION}.map -mno-download-hex -Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pisrCode=8h,-pcode=20h
 endif
 
 
