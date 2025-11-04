@@ -184,7 +184,7 @@
         <property key="summary-sha256" value="false"/>
         <property key="summary-xml" value="false"/>
         <property key="summary-xmlfull" value="false"/>
-        <appendMe value="-Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pisrCode=8h,-pcode=20h"/>
+        <appendMe value="-Wa,-mcpu=PIC16F883,-alms -Wl,-presetVect=0h,-pisrVect=4h,-pcode=20h"/>
       </pic-as-global>
       <pic-as-linker>
         <property key="linker-callgraph" value="std"/>

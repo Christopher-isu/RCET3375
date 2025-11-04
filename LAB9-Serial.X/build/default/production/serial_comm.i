@@ -6,14 +6,10 @@
 # 1 "<built-in>" 2
 # 1 "serial_comm.S" 2
 ;=================================================================
-; Servo Echo via USART - this section sets PIC16F883 for RS232
-; echo RX RC7 to TX RC6, 4MHz XT osc, async 9600 8N1 (BRGH=1
-; SPBRG=25 <1% err), poll RCIF/TXIF, '$' handshake then byte echo
-; loop, RC4 out high on RX data (RCIF=1) debug LED, disable unused
-; (ADC/CM/CCP/SR) noise/power save, dummy isrVect/isrCode for
-; linker -pisrVect=4h,-pisrCode=8h
+; MILESTONE_1_v1.6_ISR_FULLY_COMMENTED.ASM
+; 4 MHz XT ? 250 Hz servo ? 0.5?2.5 ms ? ADC via ISR
 ;=================================================================
-PROCESSOR 16F883
+    PROCESSOR 16F883 ; target device
 # 1 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include/xc.inc" 1 3
 
 
@@ -2322,142 +2318,250 @@ stk_offset SET 0
 auto_size SET 0
 ENDM
 # 8 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include/xc.inc" 2 3
-# 11 "serial_comm.S" 2
+# 7 "serial_comm.S" 2
+
 ;=================================================================
-; Device Configuration - this section sets 4MHz XT osc, disables
-; WDT/PWRTE/BOREN/LVP/CP for power/debug/simple lab, MCLR on; no
-; IESO/FCMEN single clk src stability
+; CONFIGURATION BITS ? define MCU operating mode
 ;=================================================================
-CONFIG FOSC = XT ; 4MHz crystal osc
-CONFIG WDTE = OFF ; no WDT unintended resets
-CONFIG PWRTE = OFF ; immediate start
-CONFIG MCLRE = ON ; ext reset pin
-CONFIG CP = OFF ; no code prot access
-CONFIG CPD = OFF ; no EEPROM prot
-CONFIG BOREN = OFF ; no brown-out power simple
-CONFIG IESO = OFF ; no clk switch single src
-CONFIG FCMEN = OFF ; no clk monitor
-CONFIG LVP = OFF ; no low-volt prog accidental
-CONFIG WRT = OFF ; no flash prot full access
+    CONFIG FOSC = XT ; use external 4 MHz crystal
+    CONFIG WDTE = OFF ; disable watchdog timer
+    CONFIG PWRTE = OFF ; disable power-up timer
+    CONFIG MCLRE = ON ; ((PORTA) and 07Fh), 5 functions as reset pin
+    CONFIG CP = OFF ; disable program memory code protection
+    CONFIG CPD = OFF ; disable data EEPROM code protection
+    CONFIG BOREN = OFF ; disable brown-out reset
+    CONFIG IESO = OFF ; disable internal/external oscillator switch
+    CONFIG FCMEN = OFF ; disable fail-safe clock monitor
+    CONFIG LVP = OFF ; disable low-voltage programming
+    CONFIG WRT = OFF ; disable flash write protection
+    CONFIG DEBUG = OFF ; disable background debugger
+
 ;=================================================================
-; Variables (Bank0) - this section allocs Bank0 reg for temp recv
-; byte, fast access in poll loop, min footprint
+; RAM ? shared bank 0 (0x20?0x6F) ? accessible from any bank
 ;=================================================================
-PSECT udata_bank0, class=BANK0, space=1
-RECV_BYTE: DS 1 ; temp store recv byte for echo
+    PSECT udata_shr
+SERVO_VAL: DS 1 ; stores servo position byte from PC (0?255)
+KEYWORD: DS 1 ; stores command byte (0x18 = echo, 0x81 = ADC)
+ADC_HIGH: DS 1 ; holds upper 2 bits of 10-bit ADC result
+ADC_LOW: DS 1 ; holds lower 8 bits of 10-bit ADC result
+
 ;=================================================================
-; Reset Vector - this section at 0x0000 by -presetVect=0h, no int
-; poll-based, jump MAIN at 0x0020
+; VECTORS ? fixed locations for reset and interrupt
 ;=================================================================
-PSECT resetVect, class=CODE, delta=2
-GOTO MAIN ; to MAIN at 0x0020 program start
+    PSECT resetVect,class=CODE,delta=2
+    GOTO MAIN ; jump to start of program on reset
+
+    PSECT isrVect,class=CODE,delta=2
+    GOTO ADC_ISR ; jump to A/D interrupt handler
+
 ;=================================================================
-; ISR Vector - this section dummy at 0x0004 by -pisrVect=4h, no
-; interrupts, points to isrCode satisfy linker
+; MAIN CODE SECTION ? program starts at 0x0020
 ;=================================================================
-PSECT isrVect, class=CODE, delta=2
-GOTO ISR_DUMMY ; to dummy ISR at 0x0008
+    PSECT code,class=CODE,delta=2
+
 ;=================================================================
-; ISR Code - this section dummy at 0x0008 by -pisrCode=8h, no
-; action poll-based, RETFIE satisfy linker
+; MAIN ? hardware initialization sequence
 ;=================================================================
-PSECT isrCode, class=CODE, delta=2
-ISR_DUMMY:
-RETFIE ; return no action, dummy ISR
-;=================================================================
-; Main Program - this section at 0x0020 by -pcode=20h, inits 4MHz
-; osc, disables unused (ADC/CM/CCP/SR) noise/power save, TRISC
-; ((PORTC) and 07Fh), 7=1 RX ((PORTC) and 07Fh), 6=1 TX ((PORTC) and 07Fh), 4=0 LED out, USART async 9600, wait '$'
-; handshake, echo '$', then inf recv-echo loop, ((PORTC) and 07Fh), 4 high on RX
-;=================================================================
-PSECT code, class=CODE, delta=2
 MAIN:
-BANKSEL OSCCON
-CLRF OSCCON ; clear OSCCON use 4MHz XT (FOSC=XT)
-; disable unused periphs save power/reduce noise
-BANKSEL ANSEL
-CLRF ANSEL ; clear ANSEL all digital
-BANKSEL ANSELH
-CLRF ANSELH ; clear ANSELH PORTB digital
-BANKSEL CM1CON0
-CLRF CM1CON0 ; disable comp1
-CLRF CM2CON0 ; disable comp2
-BANKSEL SRCON
-CLRF SRCON ; disable SR latch
-BANKSEL CCP1CON
-CLRF CCP1CON ; disable CCP1
-CLRF CCP2CON ; disable CCP2
-; ports: TRISC ((PORTC) and 07Fh), 7=1 RX ((PORTC) and 07Fh), 6=1 TX (USART ctrl) ((PORTC) and 07Fh), 4=0 LED out
-BANKSEL TRISC
-MOVLW 0b11010000 ; TRISC.7=1 RX, .6=1 TX, .4=0 LED
-MOVWF TRISC ; config PORTC USART+LED
-BANKSEL PORTC
-CLRF PORTC ; clear PORTC init (((PORTC) and 07Fh), 4 low)
-; USART: async master, 8-bit no parity, ((TXSTA) and 07Fh), 2=1
-BANKSEL TXSTA
-MOVLW 0b00100100 ; TXSTA=0b00100100 (((TXSTA) and 07Fh), 5=1, ((TXSTA) and 07Fh), 4=0, ((TXSTA) and 07Fh), 2=1)
-MOVWF TXSTA ; enable TX async high baud
-BANKSEL RCSTA
-MOVLW 0b10010000 ; RCSTA=0b10010000 (((RCSTA) and 07Fh), 7=1, ((RCSTA) and 07Fh), 4=1)
-MOVWF RCSTA ; enable serial/recv
-BANKSEL SPBRG
-MOVLW 25 ; SPBRG=25 9600 baud 4MHz ((TXSTA) and 07Fh), 2=1
-MOVWF SPBRG ; load baud gen
-; init vars
-BANKSEL RECV_BYTE
-CLRF RECV_BYTE ; clear RECV_BYTE init
-; handshake: wait '$' (0x24)
+    BANKSEL OSCCON ; select bank 1
+    CLRF OSCCON ; set oscillator to external 4 MHz crystal
+
+    ;--- analog pin selection ---------------------------------------
+    BANKSEL ANSEL ; select bank 1
+    MOVLW 0x01 ; set only AN0 as analog
+    MOVWF ANSEL ; AN1?AN7 remain digital
+    BANKSEL ANSELH
+    CLRF ANSELH ; AN8?AN13 remain digital
+
+    ;--- disable comparators ----------------------------------------
+    BANKSEL CM1CON0 ; select bank 3
+    CLRF CM1CON0 ; turn off comparator 1
+    CLRF CM2CON0 ; turn off comparator 2
+    BANKSEL SRCON
+    CLRF SRCON ; disable SR latch
+
+    ;--- I/O direction setup ----------------------------------------
+    BANKSEL TRISA ; select bank 1
+    BSF TRISA,0 ; ((PORTA) and 07Fh), 0 = input for ADC
+
+    BANKSEL TRISC ; select bank 1
+    MOVLW 0b10000000 ; ((PORTC) and 07Fh), 7 = input (RX), ((PORTC) and 07Fh), 6 = output (TX)
+    MOVWF TRISC ; all other RC pins set as outputs
+
+    BANKSEL PORTC ; select bank 0
+    CLRF PORTC ; clear all PORTC outputs (TX starts HIGH)
+
+    ;--- UART configuration ? 9615 baud ----------------------------
+    BANKSEL TXSTA ; select bank 1
+    MOVLW 0b00100100 ; TX enable, high-speed mode
+    MOVWF TXSTA
+    BANKSEL RCSTA
+    MOVLW 0b10010000 ; enable UART, continuous receive
+    MOVWF RCSTA
+    BANKSEL SPBRG
+    MOVLW 25 ; baud rate = 4 MHz / (16 × 25)
+    MOVWF SPBRG
+
+    ;--- ADC configuration ------------------------------------------
+    BANKSEL ADCON1 ; select bank 1
+    MOVLW 0b10000000 ; result right-justified
+    MOVWF ADCON1 ; Tad = Fosc/16 = 4 µs
+    BANKSEL ADCON0 ; select bank 0
+    MOVLW 0b01000001 ; select AN0, turn ADC on
+    MOVWF ADCON0
+
+    ;--- PWM configuration ? 250 Hz, 4 ms frame --------------------
+    BANKSEL PR2 ; select bank 1
+    MOVLW 249 ; Timer2 period register
+    MOVWF PR2 ; period = 250 counts
+    BANKSEL T2CON
+    MOVLW 0b00000111 ; Timer2 on, prescaler 1:16
+    MOVWF T2CON
+    BANKSEL CCP1CON ; select bank 0
+    MOVLW 0b00001100 ; enable PWM on ((PORTC) and 07Fh), 2
+    MOVWF CCP1CON
+    BANKSEL CCPR1L
+    MOVLW 94 ; initial duty = 94 counts ? 1.504 ms
+    MOVWF CCPR1L
+
+    ;--- enable A/D interrupt ---------------------------------------
+    BANKSEL PIE1 ; select bank 1
+    BSF PIE1,6 ; enable A/D conversion complete interrupt
+    BANKSEL INTCON ; select bank 0
+    BSF INTCON,7 ; enable all interrupts
+    BSF INTCON,6 ; enable peripheral interrupts
+
+;=================================================================
+; MAIN LOOP ? runs forever
+;=================================================================
+LOOP:
+    CALL HANDSHAKE ; wait for '$' handshake byte
+    CALL RX_LOOP ; receive servo and command bytes
+    GOTO LOOP ; repeat indefinitely
+
+;=================================================================
+; HANDSHAKE ? wait for ASCII '$' (0x24)
+;=================================================================
 HANDSHAKE:
-BANKSEL PIR1
-BTFSS PIR1, 5 ; ((PIR1) and 07Fh), 5=1? skip
-GOTO HANDSHAKE ; loop till recv
-BANKSEL RCREG
-MOVF RCREG, W ; read RCREG clear ((PIR1) and 07Fh), 5
-SUBLW 0x24 ; W=0x24-W check '$'
-BTFSS STATUS, 2 ; zero? skip (is '$')
-GOTO HANDSHAKE ; not '$' wait
-; echo '$' ack
-MOVLW 0x24 ; W=0x24 '$' TX
-CALL SEND_BYTE ; send sub
-; main echo loop: recv byte, ((PORTC) and 07Fh), 4 high LED, echo back
-ECHO_LOOP:
-BANKSEL PIR1
-BTFSS PIR1, 5 ; ((PIR1) and 07Fh), 5=1? skip
-GOTO NO_RX ; no data, clear ((PORTC) and 07Fh), 4
-BANKSEL PORTC
-BSF PORTC, 4 ; ((PORTC) and 07Fh), 4=1 LED on RX data
-BANKSEL RCSTA
-BTFSC RCSTA, 1 ; ((RCSTA) and 07Fh), 1=1? skip
-GOTO RESET_CREN ; overrun reset ((RCSTA) and 07Fh), 4
-BTFSC RCSTA, 2 ; ((RCSTA) and 07Fh), 2=1? skip
-GOTO RESET_CREN ; frame err reset ((RCSTA) and 07Fh), 4
-BANKSEL RCREG
-MOVF RCREG, W ; read RCREG clear ((PIR1) and 07Fh), 5
-BANKSEL RECV_BYTE
-MOVWF RECV_BYTE ; store RECV_BYTE
-CALL SEND_BYTE ; send W
-GOTO ECHO_LOOP ; loop
-NO_RX:
-BANKSEL PORTC
-BCF PORTC, 4 ; ((PORTC) and 07Fh), 4=0 LED off no RX
-GOTO ECHO_LOOP ; loop
-; err handle: reset ((RCSTA) and 07Fh), 4 clear ((RCSTA) and 07Fh), 1/((RCSTA) and 07Fh), 2
-RESET_CREN:
-BANKSEL RCSTA
-BCF RCSTA, 4 ; ((RCSTA) and 07Fh), 4=0 disable recv
-BSF RCSTA, 4 ; ((RCSTA) and 07Fh), 4=1 re-enable clear errs
-BANKSEL PORTC
-BSF PORTC, 4 ; ((PORTC) and 07Fh), 4=1 LED on err (RX active)
-GOTO ECHO_LOOP ; back loop
+    CALL WAIT_RX ; wait for any received byte
+    BANKSEL RCREG ; select bank 0
+    MOVF RCREG,W ; read received byte
+    SUBLW 0x24 ; subtract 0x24 from W
+    BTFSS STATUS,2 ; skip if result is zero
+    GOTO HANDSHAKE ; repeat until '$' received
+    RETURN ; handshake complete
+
 ;=================================================================
-; Send Byte Subroutine - this section polls ((PIR1) and 07Fh), 4, loads TXREG=W,
-; simple poll TX sync send
+; RX_LOOP ? receive two data bytes
 ;=================================================================
-SEND_BYTE:
-BANKSEL PIR1
-BTFSS PIR1, 4 ; ((PIR1) and 07Fh), 4=1? skip
-GOTO SEND_BYTE ; loop ready
-BANKSEL TXREG
-MOVWF TXREG ; TXREG=W start TX
-RETURN ; end
-END
+RX_LOOP:
+    CALL WAIT_RX ; wait for first byte
+    BANKSEL RCREG
+    MOVF RCREG,W ; read servo position
+    MOVWF SERVO_VAL ; store in RAM
+
+    CALL WAIT_RX ; wait for second byte
+    BANKSEL RCREG
+    MOVF RCREG,W ; read command byte
+    MOVWF KEYWORD ; store in RAM
+    CALL PROCESS ; decode and act
+    RETURN ; back to main loop
+
+;=================================================================
+; PROCESS ? interpret command and update hardware
+;=================================================================
+PROCESS:
+    ;--- scale servo value to PWM duty -------------------------------
+    MOVF SERVO_VAL,W ; load received servo byte
+    MOVWF CCPR1L ; write to PWM duty register
+    ADDWF CCPR1L,F ; multiply by 2
+    MOVLW 31 ; constant offset
+    ADDWF CCPR1L,F ; final duty = (byte×2)+31 ? 31?156 counts
+
+    BANKSEL CCP1CON ; select bank 0
+    BCF CCP1CON,0 ; clear duty bit 0
+    BCF CCP1CON,1 ; clear duty bit 1
+
+    MOVLW 0x24 ; prepare handshake acknowledge
+    CALL SEND ; transmit '$'
+
+    ;--- command dispatch -------------------------------------------
+    MOVF KEYWORD,W
+    SUBLW 0b00011000 ; test for echo command
+    BTFSC STATUS,2
+    GOTO DO_ECHO
+
+    MOVF KEYWORD,W
+    SUBLW 0b10000001 ; test for ADC command
+    BTFSC STATUS,2
+    GOTO DO_ADC
+
+    RETURN ; unknown command ? ignore
+
+DO_ECHO:
+    MOVF SERVO_VAL,W ; retransmit servo byte
+    CALL SEND
+    MOVF KEYWORD,W ; retransmit command byte
+    CALL SEND
+    RETURN
+
+DO_ADC:
+    BANKSEL ADCON0 ; select bank 0
+    BSF ADCON0,1 ; set ((ADCON0) and 07Fh), 1 bit ? start conversion
+    RETURN ; return immediately (ISR handles result)
+
+;=================================================================
+; A/D INTERRUPT ? runs when conversion finishes
+;=================================================================
+ADC_ISR:
+    BANKSEL PIR1 ; select bank 0
+    BTFSS PIR1,6 ; test A/D interrupt flag
+    RETFIE ; flag not set ? exit
+    BCF PIR1,6 ; clear A/D interrupt flag
+
+    BANKSEL ADRESH ; select bank 0
+    MOVF ADRESH,W ; read upper 2 bits
+    MOVWF ADC_HIGH ; store in RAM
+    BANKSEL ADRESL
+    MOVF ADRESL,W ; read lower 8 bits
+    MOVWF ADC_LOW ; store in RAM
+
+    BANKSEL 0 ; ensure bank 0
+    MOVF ADC_HIGH,W
+    CALL SEND ; transmit high byte
+    MOVF ADC_LOW,W
+    CALL SEND ; transmit low byte
+    RETFIE ; return from interrupt
+
+;=================================================================
+; WAIT_RX ? wait for received byte and clear errors
+;=================================================================
+WAIT_RX:
+    BANKSEL PIR1 ; select bank 0
+    BTFSS PIR1,5 ; test receive interrupt flag
+    GOTO $-1 ; loop until byte arrives
+    BANKSEL RCSTA
+    BTFSC RCSTA,1 ; test overrun error
+    GOTO CLR
+    BTFSC RCSTA,2 ; test framing error
+    GOTO CLR
+    RETURN ; byte valid ? return
+
+CLR:
+    BCF RCSTA,4 ; disable receiver
+    BSF RCSTA,4 ; re-enable receiver
+    BANKSEL RCREG
+    MOVF RCREG,W ; dummy read clears ((PIR1) and 07Fh), 5
+    RETURN
+
+;=================================================================
+; SEND ? transmit one byte
+;=================================================================
+SEND:
+    BTFSS PIR1,4 ; test transmit register empty
+    GOTO $-1 ; loop until space available
+    BANKSEL TXREG
+    MOVWF TXREG ; load byte into transmit register
+    RETURN ; transmission started
+
+    END
