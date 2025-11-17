@@ -6,7 +6,7 @@ Linker command line:
   --edf=C:\Program Files\Microchip\xc8\v3.10\pic\dat\20250813170317_en.msgs \
   -cs -h+dist/default/production\LAB10-EEPROM.X.production.sym \
   --cmf=dist/default/production\LAB10-EEPROM.X.production.cmf -z -Q16F883 \
-  -oC:\Users\chris\AppData\Local\Temp\xcAsids.0\driver_tmp_3.o \
+  -oC:\Users\chris\AppData\Local\Temp\xcAsjm0.0\driver_tmp_3.o \
   -presetVect=0h -pcode=20h --fixupoverflow=error -ver=XC8 PIC(R) Assembler \
   --fixupoverflow=lstwarn \
   -Mdist/default/production/LAB10-EEPROM.X.production.map -E1 \
@@ -30,13 +30,13 @@ Machine type is 16F883
 build/default/production/EEPROM.o
                 config                             2007     2007        2        0       4
                 resetVect                             0        0        1        0       0
-                code                                 20       20      181       40       0
-                udata_bank0                          20       20        9       20       1
+                code                                 20       20      1C2       40       0
+                udata_bank0                          20       20        B       20       1
 
 TOTAL           Name                               Link     Load   Length     Space
         CLASS   CODE           
                 resetVect                             0        0        1         0
-                code                                 20       20      181         0
+                code                                 20       20      1C2         0
 
         CLASS   STRCODE        
 
@@ -49,7 +49,7 @@ TOTAL           Name                               Link     Load   Length     Sp
         CLASS   COMMON         
 
         CLASS   BANK0          
-                udata_bank0                          20       20        9         1
+                udata_bank0                          20       20        B         1
 
         CLASS   BANK1          
 
@@ -79,50 +79,50 @@ TOTAL           Name                               Link     Load   Length     Sp
 SEGMENTS        Name                           Load    Length   Top    Selector   Space  Class     Delta
 
                 resetVect                      000000  000001  000001         0       0  CODE        2
-                udata_bank0                    000020  000009  000029        20       1  BANK0       1
-                code                           000020  000181  0001A1        40       0  CODE        2
+                udata_bank0                    000020  00000B  00002B        20       1  BANK0       1
+                code                           000020  0001C2  0001E2        40       0  CODE        2
 
 
 UNUSED ADDRESS RANGES
 
         Name                Unused          Largest block    Delta
-        BANK0            0029-006F             47           1
+        BANK0            002B-006F             45           1
         BANK1            00A0-00EF             50           1
         BANK2            0120-016F             50           1
         CODE             0001-001F             1F           2
-                         01A1-0FFF            65F
+                         01E2-0FFF            61E
         COMMON           0070-007F             10           1
         CONST            0001-001F             1F           2
-                         01A1-0FFF            100
+                         01E2-0FFF            100
         EEDATA           2100-21FF            100           2
         ENTRY            0001-001F             1F           2
-                         01A1-0FFF            100
+                         01E2-0FFF            100
         IDLOC            2000-2003              4           2
-        RAM              0029-006F             47           1
+        RAM              002B-006F             45           1
                          00A0-00EF             50
                          0120-016F             50
         SFR0             0002-001F             1E           1
         STRCODE          0001-001F             1F           2
-                         01A1-0FFF            E5F
+                         01E2-0FFF            E1E
         STRING           0001-001F             1F           2
-                         01A1-0FFF            100
+                         01E2-0FFF            100
 
                                   Symbol Table
 
-__H__absolute__ __absolute__ 0000  __Hcode         code         01A1
-__Hconfig       config       2009  __Hdata         data         0342
-__Hedata        edata        0342  __HresetVect    resetVect    0001
-__Hspace_0      (abs)        0342  __Hspace_1      (abs)        0029
+__H__absolute__ __absolute__ 0000  __Hcode         code         01E2
+__Hconfig       config       2009  __Hdata         data         03C4
+__Hedata        edata        03C4  __HresetVect    resetVect    0001
+__Hspace_0      (abs)        03C4  __Hspace_1      (abs)        002B
 __Hspace_3      (abs)        0000  __Hspace_4      (abs)        4010
-__Hudata        udata        0342  __Hudata_bank0  udata_bank0  0342
-__Hudata_bank1  udata_bank1  0342  __Hudata_bank2  udata_bank2  0342
-__Hudata_shr    udata_shr    0342  __L__absolute__ __absolute__ 0000
+__Hudata        udata        03C4  __Hudata_bank0  udata_bank0  03C4
+__Hudata_bank1  udata_bank1  03C4  __Hudata_bank2  udata_bank2  03C4
+__Hudata_shr    udata_shr    03C4  __L__absolute__ __absolute__ 0000
 __Lcode         code         0020  __Lconfig       config       0000
-__Ldata         data         0342  __Ledata        edata        0342
+__Ldata         data         03C4  __Ledata        edata        03C4
 __LresetVect    resetVect    0000  __Lspace_0      (abs)        0000
 __Lspace_1      (abs)        0000  __Lspace_3      (abs)        0000
-__Lspace_4      (abs)        0000  __Ludata        udata        0342
-__Ludata_bank0  udata_bank0  0342  __Ludata_bank1  udata_bank1  0342
-__Ludata_bank2  udata_bank2  0342  __Ludata_shr    udata_shr    0342
-__S0            (abs)        0000  __S1            (abs)        0029
+__Lspace_4      (abs)        0000  __Ludata        udata        03C4
+__Ludata_bank0  udata_bank0  03C4  __Ludata_bank1  udata_bank1  03C4
+__Ludata_bank2  udata_bank2  03C4  __Ludata_shr    udata_shr    03C4
+__S0            (abs)        0000  __S1            (abs)        002B
 __S3            (abs)        0000  

@@ -1,7 +1,7 @@
 
 
 Microchip MPLAB XC8 Assembler V3.10 build 20250813170317 
-                                                                                                           Thu Nov 13 13:04:36 2025
+                                                                                                           Mon Nov 17 13:41:13 2025
 
 
      1                           	processor	16F883
@@ -18,8 +18,8 @@ Microchip MPLAB XC8 Assembler V3.10 build 20250813170317
     12                           	psect	config,global,abs,ovrld,class=CONFIG,space=4,delta=2,noexec
     13                           
     14                           ;=================================================================
-    15                           ; EEPROM core + 10-key overwrite on RA0 low + playback on RA2 low
-    16                           ; Full 4x4 keypad scan, "R" blink during record, merge-ready
+    15                           ; VERSION 2.6.6 ? FINAL: Play stops exactly at recorded count
+    16                           ; Only change from v2.6.5: PlayLoop comparison fixed to use key_count
     17                           ;=================================================================
     18     0000                     INDF            equ	0
     19     0001                     TMR0            equ	1
@@ -2006,557 +2006,602 @@ Microchip MPLAB XC8 Assembler V3.10 build 20250813170317
   2000                           	psect	udata_bank0
   2001     0020                     ASCII:	
   2002                           ;=================================================================
-  2003                           ; Variables
+  2003                           ; RAM variables ? all in bank 0
   2004                           ;=================================================================
   2005                           
-  2006     0020                     	ds	1	; current display char / write buffer
+  2006     0020                     	ds	1	; current character to display (7-bit ASCII)
   2007     0021                     idx:
-  2008     0021                     	ds	1	; EEPROM address 0-9
+  2008     0021                     	ds	1	; current EEPROM address pointer (0?9)
   2009     0022                     key_count:
-  2010     0022                     	ds	1	; keys stored in record mode (0-9)
+  2010     0022                     	ds	1	; number of valid characters stored (0?10), binary, saved at 0x0A
   2011     0023                     flags:
-  2012     0023                     	ds	1	; bit0=record_flag, bit1=play_flag
-  2013     0024                     tmp1:
-  2014     0024                     	ds	1	; delay
-  2015     0025                     tmp2:
-  2016     0025                     	ds	1
-  2017     0026                     tmp3:
-  2018     0026                     	ds	1
-  2019     0027                     KEY:
-  2020     0027                     	ds	1	; keypad hit flag (bit0)
-  2021     0028                     buttonsA:
-  2022     0028                     	ds	1	; ((PORTA) and 07Fh), 0 -((PORTA) and 07Fh), 2 state (inverted: pressed=1)
-  2023                           
-  2024                           	psect	code
-  2025     0020                     Start:	
-  2026                           ;=================================================================
-  2027                           ; Code section
-  2028                           ;=================================================================
-  2029                           
-  2030                           
-  2031                           ;--- Port config - identical to reference -------------------------
-  2032     0020  1303 1683          	banksel	134
-  2033     0022  30F0               	movlw	240	; ((PORTB) and 07Fh), 0 -3 out, ((PORTB) and 07Fh), 4 -7 in
-  2034     0023  0086               	movwf	134
-  2035     0024  1303 1683          	banksel	135
-  2036     0026  0187               	clrf	135	; PORTC full output
-  2037     0027  1303 1683          	banksel	133
-  2038     0029  3007               	movlw	7	; ((PORTA) and 07Fh), 0 -((PORTA) and 07Fh), 2 inputs
-  2039     002A  0085               	movwf	133
-  2040     002B  1303 1683          	banksel	129
-  2041     002D  1381               	bcf	129,7	; weak pull-ups (circuit)
-  2042     002E  1703 1683          	banksel	392
-  2043     0030  0188               	clrf	392
-  2044     0031  0189               	clrf	393	; all digital
-  2045     0032  1703 1283          	banksel	263
-  2046     0034  0187               	clrf	263
-  2047     0035  0188               	clrf	264	; comparators off
-  2048     0036  1303 1283          	banksel	7
-  2049     0038  0187               	clrf	7
-  2050                           
-  2051                           ;--- Init variables -----------------------------------------------
-  2052     0039  1303  1283         	banksel	flags
-  2053     003B  01A3               	clrf	flags
-  2054     003C  1303  1283         	banksel	idx
-  2055     003E  01A1               	clrf	idx
-  2056     003F  1303  1283         	banksel	key_count
-  2057     0041  01A2               	clrf	key_count
-  2058                           
-  2059                           ;--- Fill EEPROM 0x00-0x09 with '1'..'A' once --------------------
-  2060     0042  3031               	movlw	49	; '1'
-  2061     0043  00A0               	movwf	ASCII
-  2062     0044  01A1               	clrf	idx
-  2063     0045                     FillLoop:
-  2064     0045  2152               	call	WriteEE
-  2065     0046  1303  1283         	banksel	ASCII
-  2066     0048  0AA0               	incf	ASCII,f
-  2067     0049  1303  1283         	banksel	idx
-  2068     004B  0AA1               	incf	idx,f
-  2069     004C  300A               	movlw	10
-  2070     004D  0221               	subwf	idx,w
-  2071     004E  1D03               	btfss	3,2
-  2072     004F  2845               	goto	FillLoop
-  2073                           
-  2074                           ;--- Load first value for display --------------------------------
-  2075     0050  1703 1283          	banksel	269
-  2076     0052  018D               	clrf	269
-  2077     0053  1703 1683          	banksel	396
-  2078     0055  138C               	bcf	396,7
-  2079     0056  140C               	bsf	396,0	; ((EECON1) and 07Fh), 0
-  2080     0057  1703 1283          	banksel	268
-  2081     0059  080C               	movf	268,w
-  2082     005A  1303  1283         	banksel	ASCII
-  2083     005C  00A0               	movwf	ASCII
-  2084     005D                     MainLoop:	
-  2085                           ;=================================================================
-  2086                           ; Main loop
-  2087                           ;=================================================================
-  2088                           
-  2089                           
-  2090                           ;--- Show "R" blink while recording -------------------------------
-  2091     005D  1303  1283         	banksel	flags
-  2092     005F  1823               	btfsc	flags,0
-  2093     0060  286B               	goto	ShowRecordR
-  2094                           
-  2095                           ;--- Normal display of current ASCII ------------------------------
-  2096     0061  217C               	call	ShowASCII
-  2097                           
-  2098                           ;--- Read ((PORTA) and 07Fh), 0 -((PORTA) and 07Fh), 2 (active low) --------------------------------
-      +                          ---
-  2099     0062  1303 1283          	banksel	5
-  2100     0064  0805               	movf	5,w
-  2101     0065  3907               	andlw	7
-  2102     0066  3A07               	xorlw	7	; invert -> pressed = 1
-  2103     0067  1303  1283         	banksel	buttonsA
-  2104     0069  00A8               	movwf	buttonsA	; bit0=((PORTA) and 07Fh), 0(record), bit2=((PORTA) and 07Fh), 2(play)
-  2105     006A  2876               	goto	CheckRecordBtn
-  2106     006B                     ShowRecordR:
-  2107     006B  30D2               	movlw	210
-  2108     006C  1303 1283          	banksel	7
-  2109     006E  0087               	movwf	7
-  2110     006F  1387               	bcf	7,7
-  2111     0070  2187               	call	Delay1s
-  2112     0071  1303 1283          	banksel	7
-  2113     0073  0187               	clrf	7
-  2114     0074  2187               	call	Delay1s
-  2115     0075  285D               	goto	MainLoop
-  2116     0076                     CheckRecordBtn:
-  2117                           
-  2118                           ;--- Enter RECORD on ((PORTA) and 07Fh), 0 first press -----------------------------
-  2119     0076  1303  1283         	banksel	flags
-  2120     0078  1823               	btfsc	flags,0
-  2121     0079  2886               	goto	CheckPlay
-  2122     007A  1303  1283         	banksel	buttonsA
-  2123     007C  1C28               	btfss	buttonsA,0	; ((PORTA) and 07Fh), 0 pressed?
-  2124     007D  2886               	goto	CheckPlay
-  2125     007E  1423               	bsf	flags,0	; set record_flag
-  2126     007F  1303  1283         	banksel	key_count
-  2127     0081  01A2               	clrf	key_count
-  2128     0082  1303  1283         	banksel	idx
-  2129     0084  01A1               	clrf	idx
-  2130     0085  289A               	goto	RecordLoop
-  2131     0086                     CheckPlay:
-  2132                           
-  2133                           ;--- Enter PLAY on ((PORTA) and 07Fh), 2 first press -------------------------------
-  2134     0086  1303  1283         	banksel	flags
-  2135     0088  18A3               	btfsc	flags,1
-  2136     0089  2893               	goto	RecordOrPlay
-  2137     008A  1303  1283         	banksel	buttonsA
-  2138     008C  1D28               	btfss	buttonsA,2	; ((PORTA) and 07Fh), 2 pressed?
-  2139     008D  2893               	goto	RecordOrPlay
-  2140     008E  14A3               	bsf	flags,1	; set play_flag
-  2141     008F  1303  1283         	banksel	idx
-  2142     0091  01A1               	clrf	idx
-  2143     0092  28BF               	goto	PlayLoop
-  2144     0093                     RecordOrPlay:
-  2145                           
-  2146                           ;--- Dispatch to active mode -------------------------------------
-  2147     0093  1303  1283         	banksel	flags
-  2148     0095  1823               	btfsc	flags,0
-  2149     0096  289A               	goto	RecordLoop
-  2150     0097  18A3               	btfsc	flags,1
-  2151     0098  28BF               	goto	PlayLoop
-  2152     0099  28DB               	goto	IdleDelay
-  2153     009A                     RecordLoop:	
-  2154                           ;=================================================================
-  2155                           ; RECORD mode - wait for 10 keypad entries
-  2156                           ;=================================================================
-  2157                           
-  2158     009A  20DD               	call	KeypadScan	; fills ASCII, sets KEY,0 on hit
-  2159     009B  1303  1283         	banksel	KEY
-  2160     009D  1C27               	btfss	KEY,0	; key pressed?
-  2161     009E  28AC               	goto	RecordDelay
-  2162                           
-  2163                           ;--- Store key ---------------------------------------------------
-  2164     009F  2152               	call	WriteEE
-  2165     00A0  1303  1283         	banksel	key_count
-  2166     00A2  0AA2               	incf	key_count,f
-  2167     00A3  1303  1283         	banksel	idx
-  2168     00A5  0AA1               	incf	idx,f
-  2169                           
-  2170                           ;--- Brief feedback (0.2s) ---------------------------------------
-  2171     00A6  217C               	call	ShowASCII
-  2172     00A7  2194               	call	Delay200ms
-  2173                           
-  2174                           ;--- Check completion --------------------------------------------
-  2175     00A8  300A               	movlw	10
-  2176     00A9  0222               	subwf	key_count,w
-  2177     00AA  1903               	btfsc	3,2
-  2178     00AB  28AE               	goto	ExitRecord
-  2179     00AC                     RecordDelay:
-  2180     00AC  2187               	call	Delay1s
-  2181     00AD  289A               	goto	RecordLoop
-  2182     00AE                     ExitRecord:
-  2183     00AE  1303  1283         	banksel	flags
-  2184     00B0  1023               	bcf	flags,0	; clear record_flag
-  2185                           
-  2186                           ;--- Reload first value ------------------------------------------
-  2187     00B1  1703 1283          	banksel	269
-  2188     00B3  018D               	clrf	269
-  2189     00B4  1703 1683          	banksel	396
-  2190     00B6  138C               	bcf	396,7
-  2191     00B7  140C               	bsf	396,0
-  2192     00B8  1703 1283          	banksel	268
-  2193     00BA  080C               	movf	268,w
-  2194     00BB  1303  1283         	banksel	ASCII
-  2195     00BD  00A0               	movwf	ASCII
-  2196     00BE  285D               	goto	MainLoop
-  2197     00BF                     PlayLoop:	
-  2198                           ;=================================================================
-  2199                           ; PLAY mode - cycle 10 values once
-  2200                           ;=================================================================
-  2201                           
-  2202     00BF  216B               	call	ReadEE	; -> ASCII
-  2203     00C0  217C               	call	ShowASCII
-  2204     00C1  2187               	call	Delay1s
-  2205     00C2  1303  1283         	banksel	idx
-  2206     00C4  0AA1               	incf	idx,f
-  2207     00C5  300A               	movlw	10
-  2208     00C6  0221               	subwf	idx,w
-  2209     00C7  1903               	btfsc	3,2
-  2210     00C8  28CA               	goto	ExitPlay
-  2211     00C9  28BF               	goto	PlayLoop
-  2212     00CA                     ExitPlay:
-  2213     00CA  1303  1283         	banksel	flags
-  2214     00CC  10A3               	bcf	flags,1	; clear play_flag
-  2215                           
-  2216                           ;--- Reload first value ------------------------------------------
-  2217     00CD  1703 1283          	banksel	269
-  2218     00CF  018D               	clrf	269
-  2219     00D0  1703 1683          	banksel	396
-  2220     00D2  138C               	bcf	396,7
-  2221     00D3  140C               	bsf	396,0
-  2222     00D4  1703 1283          	banksel	268
-  2223     00D6  080C               	movf	268,w
-  2224     00D7  1303  1283         	banksel	ASCII
-  2225     00D9  00A0               	movwf	ASCII
-  2226     00DA  285D               	goto	MainLoop
-  2227     00DB                     IdleDelay:
-  2228     00DB  2187               	call	Delay1s
-  2229     00DC  285D               	goto	MainLoop
-  2230     00DD                     KeypadScan:	
-  2231                           ;=================================================================
-  2232                           ; KeypadScan ? full 4×4 scan, identical to reference
-  2233                           ;=================================================================
-  2234                           
-  2235     00DD  1303  1283         	banksel	KEY
-  2236     00DF  01A7               	clrf	KEY
-  2237     00E0  1303  1283         	banksel	ASCII
-  2238     00E2  01A0               	clrf	ASCII
-  2239                           
-  2240                           ;--- Row 0 --------------------------------------------------------
-  2241     00E3  30F0               	movlw	240
-  2242     00E4  0586               	andwf	6,f
-  2243     00E5  3001               	movlw	1
-  2244     00E6  0486               	iorwf	6,f
-  2245     00E7  0000               	nop
-  2246     00E8  1303 1283          	banksel	6
-  2247     00EA  1E06               	btfss	6,4
-  2248     00EB  28EF               	goto	R0C1
-  2249     00EC  3031               	movlw	49
-  2250     00ED  00A0               	movwf	ASCII
-  2251     00EE  1427               	bsf	KEY,0
-  2252     00EF                     R0C1:
-  2253     00EF  1E86               	btfss	6,5
-  2254     00F0  28F4               	goto	R0C2
-  2255     00F1  3032               	movlw	50
-  2256     00F2  00A0               	movwf	ASCII
-  2257     00F3  1427               	bsf	KEY,0
-  2258     00F4                     R0C2:
-  2259     00F4  1F06               	btfss	6,6
-  2260     00F5  28F9               	goto	R0C3
-  2261     00F6  3033               	movlw	51
-  2262     00F7  00A0               	movwf	ASCII
-  2263     00F8  1427               	bsf	KEY,0
-  2264     00F9                     R0C3:
-  2265     00F9  1F86               	btfss	6,7
-  2266     00FA  28FE               	goto	Row1
-  2267     00FB  3041               	movlw	65
-  2268     00FC  00A0               	movwf	ASCII
-  2269     00FD  1427               	bsf	KEY,0
-  2270     00FE                     Row1:	
-  2271                           ;--- Row 1 --------------------------------------------------------
-  2272                           
-  2273     00FE  30F0               	movlw	240
-  2274     00FF  0586               	andwf	6,f
-  2275     0100  3002               	movlw	2
-  2276     0101  0486               	iorwf	6,f
-  2277     0102  0000               	nop
-  2278     0103  1303 1283          	banksel	6
-  2279     0105  1E06               	btfss	6,4
-  2280     0106  290A               	goto	R1C1
-  2281     0107  3034               	movlw	52
-  2282     0108  00A0               	movwf	ASCII
-  2283     0109  1427               	bsf	KEY,0
-  2284     010A                     R1C1:
-  2285     010A  1E86               	btfss	6,5
-  2286     010B  290F               	goto	R1C2
-  2287     010C  3035               	movlw	53
-  2288     010D  00A0               	movwf	ASCII
-  2289     010E  1427               	bsf	KEY,0
-  2290     010F                     R1C2:
-  2291     010F  1F06               	btfss	6,6
-  2292     0110  2914               	goto	R1C3
-  2293     0111  3036               	movlw	54
-  2294     0112  00A0               	movwf	ASCII
-  2295     0113  1427               	bsf	KEY,0
-  2296     0114                     R1C3:
-  2297     0114  1F86               	btfss	6,7
-  2298     0115  2919               	goto	Row2
-  2299     0116  3042               	movlw	66
-  2300     0117  00A0               	movwf	ASCII
-  2301     0118  1427               	bsf	KEY,0
-  2302     0119                     Row2:	
-  2303                           ;--- Row 2 --------------------------------------------------------
-  2304                           
-  2305     0119  30F0               	movlw	240
-  2306     011A  0586               	andwf	6,f
-  2307     011B  3004               	movlw	4
-  2308     011C  0486               	iorwf	6,f
-  2309     011D  0000               	nop
-  2310     011E  1303 1283          	banksel	6
-  2311     0120  1E06               	btfss	6,4
-  2312     0121  2925               	goto	R2C1
-  2313     0122  3037               	movlw	55
-  2314     0123  00A0               	movwf	ASCII
-  2315     0124  1427               	bsf	KEY,0
-  2316     0125                     R2C1:
-  2317     0125  1E86               	btfss	6,5
-  2318     0126  292A               	goto	R2C2
-  2319     0127  3038               	movlw	56
-  2320     0128  00A0               	movwf	ASCII
-  2321     0129  1427               	bsf	KEY,0
-  2322     012A                     R2C2:
-  2323     012A  1F06               	btfss	6,6
-  2324     012B  292F               	goto	R2C3
-  2325     012C  3039               	movlw	57
-  2326     012D  00A0               	movwf	ASCII
-  2327     012E  1427               	bsf	KEY,0
-  2328     012F                     R2C3:
-  2329     012F  1F86               	btfss	6,7
-  2330     0130  2934               	goto	Row3
-  2331     0131  3043               	movlw	67
-  2332     0132  00A0               	movwf	ASCII
-  2333     0133  1427               	bsf	KEY,0
-  2334     0134                     Row3:	
-  2335                           ;--- Row 3 --------------------------------------------------------
-  2336                           
-  2337     0134  30F0               	movlw	240
-  2338     0135  0586               	andwf	6,f
-  2339     0136  3008               	movlw	8
-  2340     0137  0486               	iorwf	6,f
-  2341     0138  0000               	nop
-  2342     0139  1303 1283          	banksel	6
-  2343     013B  1E06               	btfss	6,4
-  2344     013C  2940               	goto	R3C1
-  2345     013D  302A               	movlw	42
-  2346     013E  00A0               	movwf	ASCII
-  2347     013F  1427               	bsf	KEY,0
-  2348     0140                     R3C1:
-  2349     0140  1E86               	btfss	6,5
-  2350     0141  2945               	goto	R3C2
-  2351     0142  3030               	movlw	48
-  2352     0143  00A0               	movwf	ASCII
-  2353     0144  1427               	bsf	KEY,0
-  2354     0145                     R3C2:
-  2355     0145  1F06               	btfss	6,6
-  2356     0146  294A               	goto	R3C3
-  2357     0147  3023               	movlw	35
-  2358     0148  00A0               	movwf	ASCII
-  2359     0149  1427               	bsf	KEY,0
-  2360     014A                     R3C3:
-  2361     014A  1F86               	btfss	6,7
-  2362     014B  294F               	goto	ScanEnd
-  2363     014C  3044               	movlw	68
-  2364     014D  00A0               	movwf	ASCII
-  2365     014E  1427               	bsf	KEY,0
-  2366     014F                     ScanEnd:
-  2367     014F  30F0               	movlw	240
-  2368     0150  0586               	andwf	6,f
-  2369     0151  0008               	return
-  2370     0152                     WriteEE:	
-  2371                           ;=================================================================
-  2372                           ; EEPROM write - polling, no interrupt
-  2373                           ;=================================================================
-  2374                           
-  2375     0152  1303  1283         	banksel	idx
-  2376     0154  0821               	movf	idx,w
-  2377     0155  1703 1283          	banksel	269
-  2378     0157  008D               	movwf	269
-  2379     0158  1303  1283         	banksel	ASCII
-  2380     015A  0820               	movf	ASCII,w
-  2381     015B  1703 1283          	banksel	268
-  2382     015D  008C               	movwf	268
-  2383     015E  1703 1683          	banksel	396
-  2384     0160  138C               	bcf	396,7	; data EE
-  2385     0161  150C               	bsf	396,2	; ((EECON1) and 07Fh), 2
-  2386     0162  3055               	movlw	85
-  2387     0163  008D               	movwf	397
-  2388     0164  30AA               	movlw	170
-  2389     0165  008D               	movwf	397
-  2390     0166  148C               	bsf	396,1	; ((EECON1) and 07Fh), 1
-  2391     0167                     WriteWait:
-  2392     0167  188C               	btfsc	396,1
-  2393     0168  2967               	goto	WriteWait
-  2394     0169  110C               	bcf	396,2
-  2395     016A  0008               	return
-  2396     016B                     ReadEE:	
-  2397                           ;=================================================================
-  2398                           ; EEPROM read
-  2399                           ;=================================================================
-  2400                           
-  2401     016B  1303  1283         	banksel	idx
-  2402     016D  0821               	movf	idx,w
-  2403     016E  1703 1283          	banksel	269
-  2404     0170  008D               	movwf	269
-  2405     0171  1703 1683          	banksel	396
-  2406     0173  138C               	bcf	396,7
-  2407     0174  140C               	bsf	396,0	; ((EECON1) and 07Fh), 0
-  2408     0175  1703 1283          	banksel	268
-  2409     0177  080C               	movf	268,w
-  2410     0178  1303  1283         	banksel	ASCII
-  2411     017A  00A0               	movwf	ASCII
-  2412     017B  0008               	return
-  2413     017C                     ShowASCII:	
-  2414                           ;=================================================================
-  2415                           ; Display ASCII on PORTC (bit7=1, strobe off)
-  2416                           ;=================================================================
-  2417                           
-  2418     017C  1303  1283         	banksel	ASCII
-  2419     017E  0820               	movf	ASCII,w
-  2420     017F  3880               	iorlw	128
-  2421     0180  1303 1283          	banksel	7
-  2422     0182  0087               	movwf	7
-  2423     0183  1387               	bcf	7,7
-  2424     0184  0000               	nop
-  2425     0185  0000               	nop
-  2426     0186  0008               	return
-  2427     0187                     Delay1s:	
-  2428                           ;=================================================================
-  2429                           ; 1 second delay - identical to reference
-  2430                           ;=================================================================
-  2431                           
-  2432     0187  3004               	movlw	4
-  2433     0188  00A4               	movwf	tmp1
-  2434     0189                     L1:
-  2435     0189  30FF               	movlw	255
-  2436     018A  00A5               	movwf	tmp2
-  2437     018B                     L2:
-  2438     018B  30C8               	movlw	200
-  2439     018C  00A6               	movwf	tmp3
-  2440     018D                     L3:
-  2441     018D  0BA6               	decfsz	tmp3,f
-  2442     018E  298D               	goto	L3
-  2443     018F  0BA5               	decfsz	tmp2,f
-  2444     0190  298B               	goto	L2
-  2445     0191  0BA4               	decfsz	tmp1,f
-  2446     0192  2989               	goto	L1
-  2447     0193  0008               	return
-  2448     0194                     Delay200ms:	
-  2449                           ;=================================================================
-  2450                           ; 200 ms feedback delay (record mode)
-  2451                           ;=================================================================
-  2452                           
-  2453     0194  3001               	movlw	1
-  2454     0195  00A4               	movwf	tmp1
-  2455     0196                     D2L1:
-  2456     0196  30FF               	movlw	255
-  2457     0197  00A5               	movwf	tmp2
-  2458     0198                     D2L2:
-  2459     0198  3032               	movlw	50	; ~200 ms at 4 MHz
-  2460     0199  00A6               	movwf	tmp3
-  2461     019A                     D2L3:
-  2462     019A  0BA6               	decfsz	tmp3,f
-  2463     019B  299A               	goto	D2L3
-  2464     019C  0BA5               	decfsz	tmp2,f
-  2465     019D  2998               	goto	D2L2
-  2466     019E  0BA4               	decfsz	tmp1,f
-  2467     019F  2996               	goto	D2L1
-  2468     01A0  0008               	return
-  2469                           
-  2470                           	psect	edata
-  2471     0000                     stk_offset      set	0
-  2472     0000                     auto_size       set	0
-  2473                           
-  2474                           ; stack_auto defines a symbol /name/_offset which equates to the
-  2475                           ; stack offset of the auto object in question
-  2476     0000                     
-  2477                           ; stack_param defines a symbol /name/_offset which equates to the
-  2478                           ; stack offset of the parameter object in question
-  2479     0000                     
-  2480                           ; alloc_stack adjusts the SP to allocate space for auto objects
-  2481                           ; it also links in to the btemp symbol so that can be used
-  2482     0000                     
-  2483                           ; restore_stack adjusts the SP to remove all auto and parameter
-  2484                           ; objects from the stack prior to returning from a function
-  2485     0000                     
-  2486                           	psect	resetVect
-  2487                           
-  2488                           ;=================================================================
-  2489                           ; Reset vector
-  2490                           ;=================================================================
-  2491     0000  2820               	goto	Start
-  2492                           
-  2493                           	psect	config
-  2494                           
-  2495                           ;Config register CONFIG1 @ 0x2007
-  2496                           ;	Oscillator Selection bits
-  2497                           ;	FOSC = XT, XT oscillator: Crystal/resonator on RA6/OSC2/CLKOUT and RA7/OSC1/CLKIN
-  2498                           ;	Watchdog Timer Enable bit
-  2499                           ;	WDTE = OFF, WDT disabled and can be enabled by SWDTEN bit of the WDTCON register
-  2500                           ;	Power-up Timer Enable bit
-  2501                           ;	PWRTE = OFF, PWRT disabled
-  2502                           ;	RE3/MCLR pin function select bit
-  2503                           ;	MCLRE = ON, RE3/MCLR pin function is MCLR
-  2504                           ;	Code Protection bit
-  2505                           ;	CP = OFF, Program memory code protection is disabled
-  2506                           ;	Data Code Protection bit
-  2507                           ;	CPD = OFF, Data memory code protection is disabled
-  2508                           ;	Brown Out Reset Selection bits
-  2509                           ;	BOREN = OFF, BOR disabled
-  2510                           ;	Internal External Switchover bit
-  2511                           ;	IESO = OFF, Internal/External Switchover mode is disabled
-  2512                           ;	Fail-Safe Clock Monitor Enabled bit
-  2513                           ;	FCMEN = OFF, Fail-Safe Clock Monitor is disabled
-  2514                           ;	Low Voltage Programming Enable bit
-  2515                           ;	LVP = OFF, RB3 pin has digital I/O, HV on MCLR must be used for programming
-  2516                           ;	In-Circuit Debugger Mode bit
-  2517                           ;	DEBUG = 0x1, unprogrammed default
-  2518     2007                     	org	8199
-  2519     2007  20F1               	dw	8433
-  2520                           
-  2521                           ;Config register CONFIG2 @ 0x2008
-  2522                           ;	Brown-out Reset Selection bit
-  2523                           ;	BOR4V = 0x1, unprogrammed default
-  2524                           ;	Flash Program Memory Self Write Enable bits
-  2525                           ;	WRT = OFF, Write protection off
-  2526     2008                     	org	8200
-  2527     2008  3FFF               	dw	16383
+  2012     0023                     	ds	1	; bit0 = Record mode active, bit1 = Play mode active
+  2013     0024                     prev_key_state:
+  2014     0024                     	ds	1	; bit0 = previous keypad press state (edge detection)
+  2015     0025                     idle_toggle:
+  2016     0025                     	ds	1	; bit0 toggles every 1s in idle for 'S' / first-char blink
+  2017     0026                     first_value:
+  2018     0026                     	ds	1	; cached copy of EEPROM[0] for idle display
+  2019     0027                     tmp1:
+  2020     0027                     	ds	1	; DelayMs outer loop counter
+  2021     0028                     tmp2:
+  2022     0028                     	ds	1	; DelayMs inner loop counter
+  2023     0029                     KEY:
+  2024     0029                     	ds	1	; bit0 set when KeypadScan detects any key press
+  2025     002A                     buttonsA:
+  2026     002A                     	ds	1	; bit0=Record btn, bit1=Stop btn, bit2=Play btn (active-high after inversion)
+  2027                           
+  2028                           	psect	code
+  2029     0020                     Start:	
+  2030                           ;=================================================================
+  2031                           ; Main code section
+  2032                           ;=================================================================
+  2033                           
+  2034     0020  1303 1683          	banksel	134
+  2035     0022  30F0               	movlw	240	; ((PORTB) and 07Fh), 7?((PORTB) and 07Fh), 4 inputs (keypad columns), ((PORTB) and 07Fh)
+      +                          , 3?((PORTB) and 07Fh), 0 outputs (rows)
+  2036     0023  0086               	movwf	134	; configure keypad port direction
+  2037     0024  1303 1683          	banksel	135
+  2038     0026  0187               	clrf	135	; PORTC all outputs ? drives dot-matrix display
+  2039     0027  1303 1683          	banksel	133
+  2040     0029  3007               	movlw	7	; ((PORTA) and 07Fh), 0?((PORTA) and 07Fh), 2 inputs for Record/Stop/Play buttons
+  2041     002A  0085               	movwf	133	; configure button inputs
+  2042     002B  1703 1683          	banksel	392
+  2043     002D  0188               	clrf	392	; disable analog on PORTA
+  2044     002E  0189               	clrf	393	; disable analog on PORTB
+  2045     002F  1703 1283          	banksel	263
+  2046     0031  0187               	clrf	263	; disable comparator 1
+  2047     0032  0188               	clrf	264	; disable comparator 2
+  2048     0033  1303 1283          	banksel	7
+  2049     0035  0187               	clrf	7	; clear display at startup
+  2050     0036  1303 1683          	banksel	129
+  2051     0038  3001               	movlw	1	; prescaler to TMR0, ratio 1:4 for accurate timing
+  2052     0039  0081               	movwf	129	; configure Timer0 prescaler
+  2053     003A  1303  1283         	banksel	flags
+  2054     003C  01A3               	clrf	flags	; clear all mode flags
+  2055     003D  1303  1283         	banksel	idx
+  2056     003F  01A1               	clrf	idx	; initialize EEPROM pointer
+  2057     0040  1303  1283         	banksel	key_count
+  2058     0042  01A2               	clrf	key_count	; initialize stored count
+  2059     0043  1303  1283         	banksel	prev_key_state
+  2060     0045  01A4               	clrf	prev_key_state	; no previous key press
+  2061     0046  1303  1283         	banksel	idle_toggle
+  2062     0048  01A5               	clrf	idle_toggle	; start idle showing first character
+  2063     0049  20F3               	call	LoadKeyCount	; restore saved key_count from EEPROM[0x0A]
+  2064     004A  2122               	call	LoadFirstVal	; load first recorded character for idle display
+  2065     004B                     MainLoop:	
+  2066                           ;=================================================================
+  2067                           ; Main dispatcher ? checks buttons and active modes
+  2068                           ;=================================================================
+  2069                           
+  2070     004B  2119               	call	ReadButtons	; sample ((PORTA) and 07Fh), 0?((PORTA) and 07Fh), 2 into buttonsA (active-high)
+  2071     004C  1303  1283         	banksel	flags
+  2072     004E  1823               	btfsc	flags,0	; is Record mode already active?
+  2073     004F  2861               	goto	CheckPlay	; skip button check if yes
+  2074     0050  1303  1283         	banksel	buttonsA
+  2075     0052  1C2A               	btfss	buttonsA,0	; Record button pressed?
+  2076     0053  2861               	goto	CheckPlay	; no ? skip
+  2077     0054  3052               	movlw	82	; show 'R' during entry
+  2078     0055  1303  1283         	banksel	ASCII
+  2079     0057  00A0               	movwf	ASCII
+  2080     0058  21D7               	call	ShowASCII	; display 'R'
+  2081     0059  1423               	bsf	flags,0	; enter Record mode
+  2082     005A  1303  1283         	banksel	idx
+  2083     005C  01A1               	clrf	idx	; start writing from address 0
+  2084     005D  1303  1283         	banksel	prev_key_state
+  2085     005F  01A4               	clrf	prev_key_state	; clear edge detector
+  2086     0060  2875               	goto	RecordLoop	; begin recording
+  2087     0061                     CheckPlay:
+  2088     0061  1303  1283         	banksel	flags
+  2089     0063  18A3               	btfsc	flags,1	; is Play mode already active?
+  2090     0064  286E               	goto	RecordOrPlay	; skip button check
+  2091     0065  1303  1283         	banksel	buttonsA
+  2092     0067  1D2A               	btfss	buttonsA,2	; Play button pressed?
+  2093     0068  286E               	goto	RecordOrPlay	; no ? skip
+  2094     0069  14A3               	bsf	flags,1	; enter Play mode
+  2095     006A  1303  1283         	banksel	idx
+  2096     006C  01A1               	clrf	idx	; start reading from address 0
+  2097     006D  28B7               	goto	PlayLoop	; begin playback
+  2098     006E                     RecordOrPlay:
+  2099     006E  1303  1283         	banksel	flags
+  2100     0070  1823               	btfsc	flags,0	; Record mode active?
+  2101     0071  2875               	goto	RecordLoop
+  2102     0072  18A3               	btfsc	flags,1	; Play mode active?
+  2103     0073  28B7               	goto	PlayLoop
+  2104     0074  28CA               	goto	IdleBlink	; no mode ? idle state
+  2105     0075                     RecordLoop:	
+  2106                           ;=================================================================
+  2107                           ; RECORD mode ? edge-triggered keypad, stops at 10 or Stop button
+  2108                           ;=================================================================
+  2109                           
+  2110     0075  2119               	call	ReadButtons	; check for Stop button
+  2111     0076  1CAA               	btfss	buttonsA,1	; Stop button pressed?
+  2112     0077  2879               	goto	CheckKeyEdge	; no ? continue
+  2113     0078  28A8               	goto	ExitRecord	; yes ? exit recording
+  2114     0079                     CheckKeyEdge:
+  2115     0079  2138               	call	KeypadScan	; scan keypad, fill ASCII and set KEY,0 on press
+  2116     007A  1303  1283         	banksel	KEY
+  2117     007C  1829               	btfsc	KEY,0	; any key pressed?
+  2118     007D  2882               	goto	KeyPressedNow	; yes ? process
+  2119     007E  1303  1283         	banksel	prev_key_state
+  2120     0080  01A4               	clrf	prev_key_state	; key released ? clear edge
+  2121     0081  289B               	goto	ShowRifZero	; show 'R' if nothing recorded
+  2122     0082                     KeyPressedNow:
+  2123     0082  1303  1283         	banksel	prev_key_state
+  2124     0084  1824               	btfsc	prev_key_state,0	; was key already down?
+  2125     0085  2875               	goto	RecordLoop	; yes ? ignore repeat
+  2126     0086  1424               	bsf	prev_key_state,0	; remember key is down
+  2127     0087  21AD               	call	WriteEE	; store ASCII at current idx
+  2128     0088  1303  1283         	banksel	key_count
+  2129     008A  0AA2               	incf	key_count,f	; increment stored count
+  2130     008B  2102               	call	SaveKeyCount	; persist count immediately
+  2131     008C  1303  1283         	banksel	idx
+  2132     008E  0AA1               	incf	idx,f	; advance pointer
+  2133     008F  300A               	movlw	10
+  2134     0090  0221               	subwf	idx,w	; compare idx with 10
+  2135     0091  1903               	btfsc	3,2	; Z=1 ? idx == 10?
+  2136     0092  2895               	goto	ReachedTen	; yes ? cap and exit
+  2137     0093  21D7               	call	ShowASCII	; echo pressed character
+  2138     0094  2875               	goto	RecordLoop	; continue recording
+  2139     0095                     ReachedTen:
+  2140     0095  1303  1283         	banksel	key_count
+  2141     0097  300A               	movlw	10	; force maximum count
+  2142     0098  00A2               	movwf	key_count
+  2143     0099  2102               	call	SaveKeyCount	; persist capped count
+  2144     009A  28A8               	goto	ExitRecord	; exit recording
+  2145     009B                     ShowRifZero:
+  2146     009B  1303  1283         	banksel	key_count
+  2147     009D  0822               	movf	key_count,w
+  2148     009E  1D03               	btfss	3,2	; Z=1 ? nothing recorded?
+  2149     009F  28A5               	goto	JustPoll	; no ? skip 'R' display
+  2150     00A0  3052               	movlw	82
+  2151     00A1  1303  1283         	banksel	ASCII
+  2152     00A3  00A0               	movwf	ASCII
+  2153     00A4  21D7               	call	ShowASCII	; show 'R' when idle in record mode
+  2154     00A5                     JustPoll:
+  2155     00A5  300A               	movlw	10
+  2156     00A6  20E6               	call	DelayMs	; 10 ms non-blocking poll delay
+  2157     00A7  2875               	goto	RecordLoop	; continue loop
+  2158     00A8                     ExitRecord:
+  2159     00A8  1303  1283         	banksel	idx
+  2160     00AA  0821               	movf	idx,w	; idx = actual number of chars written
+  2161     00AB  1303  1283         	banksel	key_count
+  2162     00AD  00A2               	movwf	key_count	; sync count with reality
+  2163     00AE  2102               	call	SaveKeyCount	; persist final count
+  2164     00AF  1303  1283         	banksel	flags
+  2165     00B1  1023               	bcf	flags,0	; clear Record mode flag
+  2166     00B2  1303  1283         	banksel	prev_key_state
+  2167     00B4  01A4               	clrf	prev_key_state	; clear edge detector
+  2168     00B5  2133               	call	ExitMode	; refresh idle display
+  2169     00B6  284B               	goto	MainLoop	; return to dispatcher
+  2170     00B7                     PlayLoop:	
+  2171                           ;=================================================================
+  2172                           ; PLAY mode ? displays each character for 1 second, stops at key_count
+  2173                           ;=================================================================
+  2174                           
+  2175     00B7  21C6               	call	ReadEE	; load EEPROM[idx] into ASCII
+  2176     00B8  21D7               	call	ShowASCII	; display current character
+  2177     00B9  30E8               	movlw	1000
+  2178     00BA  20E6               	call	DelayMs	; hold for 1 second
+  2179     00BB  1303  1283         	banksel	idx
+  2180     00BD  0AA1               	incf	idx,f	; advance to next address
+  2181     00BE  1303  1283         	banksel	key_count
+  2182     00C0  0821               	movf	idx,w
+  2183     00C1  0222               	subwf	key_count,w	; W = key_count - idx
+  2184     00C2  1903               	btfsc	3,2	; Z=1 ? idx == key_count?
+  2185     00C3  28C5               	goto	ExitPlay	; yes ? playback complete
+  2186     00C4  28B7               	goto	PlayLoop	; continue playback
+  2187     00C5                     ExitPlay:
+  2188     00C5  1303  1283         	banksel	flags
+  2189     00C7  10A3               	bcf	flags,1	; clear Play mode flag
+  2190     00C8  2133               	call	ExitMode	; refresh idle display
+  2191     00C9  284B               	goto	MainLoop	; return to dispatcher
+  2192     00CA                     IdleBlink:	
+  2193                           ;=================================================================
+  2194                           ; IDLE mode ? blink 'S' ? first stored character every 1 second
+  2195                           ;=================================================================
+  2196                           
+  2197     00CA  1303  1283         	banksel	idle_toggle
+  2198     00CC  1825               	btfsc	idle_toggle,0	; toggle bit set?
+  2199     00CD  28D5               	goto	ShowS	; yes ? show 'S'
+  2200     00CE  1303  1283         	banksel	first_value
+  2201     00D0  0826               	movf	first_value,w	; load cached first character
+  2202     00D1  1303  1283         	banksel	ASCII
+  2203     00D3  00A0               	movwf	ASCII	; prepare for display
+  2204     00D4  28D9               	goto	DoShowWait
+  2205     00D5                     ShowS:
+  2206     00D5  3053               	movlw	83	; load 'S' for start indication
+  2207     00D6  1303  1283         	banksel	ASCII
+  2208     00D8  00A0               	movwf	ASCII	; prepare 'S' for display
+  2209     00D9                     DoShowWait:
+  2210     00D9  21D7               	call	ShowASCII	; output current symbol
+  2211     00DA  30E8               	movlw	1000
+  2212     00DB  20E6               	call	DelayMs	; hold for 1 second
+  2213     00DC  1303  1283         	banksel	idle_toggle
+  2214     00DE  3001               	movlw	1
+  2215     00DF  06A5               	xorwf	idle_toggle,f	; toggle bit 0 for next cycle
+  2216     00E0  2119               	call	ReadButtons	; allow instant exit on button press
+  2217     00E1  182A               	btfsc	buttonsA,0	; Record button?
+  2218     00E2  284B               	goto	MainLoop
+  2219     00E3  192A               	btfsc	buttonsA,2	; Play button?
+  2220     00E4  284B               	goto	MainLoop
+  2221     00E5  28CA               	goto	IdleBlink	; continue blinking
+  2222     00E6                     DelayMs:	
+  2223                           ;=================================================================
+  2224                           ; DelayMs ? TMR0-based delay, ~1 ms × W (prescaler 1:4)
+  2225                           ;=================================================================
+  2226                           
+  2227     00E6  00A7               	movwf	tmp1	; store requested milliseconds
+  2228     00E7                     DelayMs_Loop:
+  2229     00E7  3004               	movlw	4	; 4 × 250 µs loops per ms
+  2230     00E8  00A8               	movwf	tmp2	; inner counter
+  2231     00E9                     DelayMs_Inner:
+  2232     00E9  3006               	movlw	6	; TMR0 preload for ~250 µs
+  2233     00EA  0081               	movwf	1	; start timer
+  2234     00EB                     DelayMs_Wait:
+  2235     00EB  1D0B               	btfss	11,2	; wait for overflow
+  2236     00EC  28EB               	goto	DelayMs_Wait
+  2237     00ED  110B               	bcf	11,2	; clear ((INTCON) and 07Fh), 2
+  2238     00EE  0BA8               	decfsz	tmp2,f	; inner loop done?
+  2239     00EF  28E9               	goto	DelayMs_Inner
+  2240     00F0  0BA7               	decfsz	tmp1,f	; outer loop done?
+  2241     00F1  28E7               	goto	DelayMs_Loop
+  2242     00F2  0008               	return	; delay complete
+  2243     00F3                     LoadKeyCount:	
+  2244                           ;=================================================================
+  2245                           ; LoadKeyCount ? restore binary count from EEPROM address 0x0A
+  2246                           ;=================================================================
+  2247                           
+  2248     00F3  1703 1283          	banksel	269
+  2249     00F5  300A               	movlw	10	; address of count storage
+  2250     00F6  008D               	movwf	269	; set address
+  2251     00F7  1703 1683          	banksel	396
+  2252     00F9  138C               	bcf	396,7	; ((EECON1) and 07Fh), 7=0 ? data EEPROM
+  2253     00FA  140C               	bsf	396,0	; ((EECON1) and 07Fh), 0=1 ? initiate read
+  2254     00FB  1703 1283          	banksel	268
+  2255     00FD  080C               	movf	268,w	; read byte
+  2256     00FE  1303  1283         	banksel	key_count
+  2257     0100  00A2               	movwf	key_count	; restore into RAM
+  2258     0101  0008               	return
+  2259     0102                     SaveKeyCount:	
+  2260                           ;=================================================================
+  2261                           ; SaveKeyCount ? write current key_count to EEPROM address 0x0A
+  2262                           ;=================================================================
+  2263                           
+  2264     0102  1703 1283          	banksel	269
+  2265     0104  300A               	movlw	10	; target address
+  2266     0105  008D               	movwf	269
+  2267     0106  1303  1283         	banksel	key_count
+  2268     0108  0822               	movf	key_count,w	; get current count
+  2269     0109  1703 1283          	banksel	268
+  2270     010B  008C               	movwf	268	; place into data register
+  2271     010C  1703 1683          	banksel	396
+  2272     010E  138C               	bcf	396,7	; ((EECON1) and 07Fh), 7=0
+  2273     010F  150C               	bsf	396,2	; ((EECON1) and 07Fh), 2=1 enable write
+  2274     0110  3055               	movlw	85
+  2275     0111  008D               	movwf	397	; unlock sequence
+  2276     0112  30AA               	movlw	170
+  2277     0113  008D               	movwf	397
+  2278     0114  148C               	bsf	396,1	; ((EECON1) and 07Fh), 1=1 start write
+  2279     0115                     SaveWait:
+  2280     0115  188C               	btfsc	396,1	; wait for completion
+  2281     0116  2915               	goto	SaveWait
+  2282     0117  110C               	bcf	396,2	; ((EECON1) and 07Fh), 2=0 disable write
+  2283     0118  0008               	return
+  2284     0119                     ReadButtons:	
+  2285                           ;=================================================================
+  2286                           ; ReadButtons ? sample ((PORTA) and 07Fh), 0?((PORTA) and 07Fh), 2, invert logic (active-high)
+  2287                           ;=================================================================
+  2288                           
+  2289     0119  1303 1283          	banksel	5
+  2290     011B  0805               	movf	5,w	; read PORTA
+  2291     011C  3907               	andlw	7	; mask ((PORTA) and 07Fh), 0?((PORTA) and 07Fh), 2
+  2292     011D  3A07               	xorlw	7	; invert (external pull-downs)
+  2293     011E  1303  1283         	banksel	buttonsA
+  2294     0120  00AA               	movwf	buttonsA	; store result
+  2295     0121  0008               	return
+  2296     0122                     LoadFirstVal:	
+  2297                           ;=================================================================
+  2298                           ; LoadFirstVal ? read EEPROM[0] into first_value and ASCII
+  2299                           ;=================================================================
+  2300                           
+  2301     0122  1703 1283          	banksel	269
+  2302     0124  018D               	clrf	269	; address 0
+  2303     0125  1703 1683          	banksel	396
+  2304     0127  138C               	bcf	396,7	; ((EECON1) and 07Fh), 7=0
+  2305     0128  140C               	bsf	396,0	; ((EECON1) and 07Fh), 0=1 initiate read
+  2306     0129  1703 1283          	banksel	268
+  2307     012B  080C               	movf	268,w	; get byte
+  2308     012C  1303  1283         	banksel	first_value
+  2309     012E  00A6               	movwf	first_value	; cache for idle blink
+  2310     012F  1303  1283         	banksel	ASCII
+  2311     0131  00A0               	movwf	ASCII	; display immediately
+  2312     0132  0008               	return
+  2313     0133                     ExitMode:	
+  2314                           ;=================================================================
+  2315                           ; ExitMode ? common exit cleanup for Record and Play
+  2316                           ;=================================================================
+  2317                           
+  2318     0133  2122               	call	LoadFirstVal	; refresh first character
+  2319     0134  1303  1283         	banksel	idle_toggle
+  2320     0136  01A5               	clrf	idle_toggle	; force next idle to show first char
+  2321     0137  284B               	goto	MainLoop	; return to main dispatcher
+  2322     0138                     KeypadScan:	
+  2323                           ;=================================================================
+  2324                           ; KeypadScan ? 4×4 matrix scan, fills ASCII and sets KEY,0
+  2325                           ;=================================================================
+  2326                           
+  2327     0138  1303  1283         	banksel	KEY
+  2328     013A  01A9               	clrf	KEY	; clear key detected flag
+  2329     013B  1303  1283         	banksel	ASCII
+  2330     013D  01A0               	clrf	ASCII	; clear output
+  2331     013E  30F0               	movlw	240
+  2332     013F  0586               	andwf	6,f	; clear row drive bits
+  2333     0140  3001               	movlw	1
+  2334     0141  0486               	iorwf	6,f	; drive row 0
+  2335     0142  0000               	nop	; settle time
+  2336     0143  1303 1283          	banksel	6
+  2337     0145  1E06               	btfss	6,4
+  2338     0146  294A               	goto	R0C1
+  2339     0147  3031               	movlw	49
+  2340     0148  00A0               	movwf	ASCII
+  2341     0149  1429               	bsf	KEY,0
+  2342     014A                     R0C1:
+  2343     014A  1E86               	btfss	6,5
+  2344     014B  294F               	goto	R0C2
+  2345     014C  3032               	movlw	50
+  2346     014D  00A0               	movwf	ASCII
+  2347     014E  1429               	bsf	KEY,0
+  2348     014F                     R0C2:
+  2349     014F  1F06               	btfss	6,6
+  2350     0150  2954               	goto	R0C3
+  2351     0151  3033               	movlw	51
+  2352     0152  00A0               	movwf	ASCII
+  2353     0153  1429               	bsf	KEY,0
+  2354     0154                     R0C3:
+  2355     0154  1F86               	btfss	6,7
+  2356     0155  2959               	goto	Row1
+  2357     0156  3041               	movlw	65
+  2358     0157  00A0               	movwf	ASCII
+  2359     0158  1429               	bsf	KEY,0
+  2360     0159                     Row1:
+  2361     0159  30F0               	movlw	240
+  2362     015A  0586               	andwf	6,f
+  2363     015B  3002               	movlw	2
+  2364     015C  0486               	iorwf	6,f
+  2365     015D  0000               	nop
+  2366     015E  1303 1283          	banksel	6
+  2367     0160  1E06               	btfss	6,4
+  2368     0161  2965               	goto	R1C1
+  2369     0162  3034               	movlw	52
+  2370     0163  00A0               	movwf	ASCII
+  2371     0164  1429               	bsf	KEY,0
+  2372     0165                     R1C1:
+  2373     0165  1E86               	btfss	6,5
+  2374     0166  296A               	goto	R1C2
+  2375     0167  3035               	movlw	53
+  2376     0168  00A0               	movwf	ASCII
+  2377     0169  1429               	bsf	KEY,0
+  2378     016A                     R1C2:
+  2379     016A  1F06               	btfss	6,6
+  2380     016B  296F               	goto	R1C3
+  2381     016C  3036               	movlw	54
+  2382     016D  00A0               	movwf	ASCII
+  2383     016E  1429               	bsf	KEY,0
+  2384     016F                     R1C3:
+  2385     016F  1F86               	btfss	6,7
+  2386     0170  2974               	goto	Row2
+  2387     0171  3042               	movlw	66
+  2388     0172  00A0               	movwf	ASCII
+  2389     0173  1429               	bsf	KEY,0
+  2390     0174                     Row2:
+  2391     0174  30F0               	movlw	240
+  2392     0175  0586               	andwf	6,f
+  2393     0176  3004               	movlw	4
+  2394     0177  0486               	iorwf	6,f
+  2395     0178  0000               	nop
+  2396     0179  1303 1283          	banksel	6
+  2397     017B  1E06               	btfss	6,4
+  2398     017C  2980               	goto	R2C1
+  2399     017D  3037               	movlw	55
+  2400     017E  00A0               	movwf	ASCII
+  2401     017F  1429               	bsf	KEY,0
+  2402     0180                     R2C1:
+  2403     0180  1E86               	btfss	6,5
+  2404     0181  2985               	goto	R2C2
+  2405     0182  3038               	movlw	56
+  2406     0183  00A0               	movwf	ASCII
+  2407     0184  1429               	bsf	KEY,0
+  2408     0185                     R2C2:
+  2409     0185  1F06               	btfss	6,6
+  2410     0186  298A               	goto	R2C3
+  2411     0187  3039               	movlw	57
+  2412     0188  00A0               	movwf	ASCII
+  2413     0189  1429               	bsf	KEY,0
+  2414     018A                     R2C3:
+  2415     018A  1F86               	btfss	6,7
+  2416     018B  298F               	goto	Row3
+  2417     018C  3043               	movlw	67
+  2418     018D  00A0               	movwf	ASCII
+  2419     018E  1429               	bsf	KEY,0
+  2420     018F                     Row3:
+  2421     018F  30F0               	movlw	240
+  2422     0190  0586               	andwf	6,f
+  2423     0191  3008               	movlw	8
+  2424     0192  0486               	iorwf	6,f
+  2425     0193  0000               	nop
+  2426     0194  1303 1283          	banksel	6
+  2427     0196  1E06               	btfss	6,4
+  2428     0197  299B               	goto	R3C1
+  2429     0198  302A               	movlw	42
+  2430     0199  00A0               	movwf	ASCII
+  2431     019A  1429               	bsf	KEY,0
+  2432     019B                     R3C1:
+  2433     019B  1E86               	btfss	6,5
+  2434     019C  29A0               	goto	R3C2
+  2435     019D  3030               	movlw	48
+  2436     019E  00A0               	movwf	ASCII
+  2437     019F  1429               	bsf	KEY,0
+  2438     01A0                     R3C2:
+  2439     01A0  1F06               	btfss	6,6
+  2440     01A1  29A5               	goto	R3C3
+  2441     01A2  3023               	movlw	35
+  2442     01A3  00A0               	movwf	ASCII
+  2443     01A4  1429               	bsf	KEY,0
+  2444     01A5                     R3C3:
+  2445     01A5  1F86               	btfss	6,7
+  2446     01A6  29AA               	goto	ScanEnd
+  2447     01A7  3044               	movlw	68
+  2448     01A8  00A0               	movwf	ASCII
+  2449     01A9  1429               	bsf	KEY,0
+  2450     01AA                     ScanEnd:
+  2451     01AA  30F0               	movlw	240
+  2452     01AB  0586               	andwf	6,f	; return rows to idle state
+  2453     01AC  0008               	return
+  2454     01AD                     WriteEE:	
+  2455                           ;=================================================================
+  2456                           ; WriteEE ? write ASCII to EEPROM at current idx (0?9)
+  2457                           ;=================================================================
+  2458                           
+  2459     01AD  1303  1283         	banksel	idx
+  2460     01AF  0821               	movf	idx,w	; get current index
+  2461     01B0  1703 1283          	banksel	269
+  2462     01B2  008D               	movwf	269	; set EEPROM address
+  2463     01B3  1303  1283         	banksel	ASCII
+  2464     01B5  0820               	movf	ASCII,w	; get character
+  2465     01B6  1703 1283          	banksel	268
+  2466     01B8  008C               	movwf	268	; place in data register
+  2467     01B9  1703 1683          	banksel	396
+  2468     01BB  138C               	bcf	396,7	; ((EECON1) and 07Fh), 7=0 data EEPROM
+  2469     01BC  150C               	bsf	396,2	; ((EECON1) and 07Fh), 2=1 enable write
+  2470     01BD  3055               	movlw	85
+  2471     01BE  008D               	movwf	397	; unlock sequence part 1
+  2472     01BF  30AA               	movlw	170
+  2473     01C0  008D               	movwf	397	; unlock sequence part 2
+  2474     01C1  148C               	bsf	396,1	; ((EECON1) and 07Fh), 1=1 start write
+  2475     01C2                     WriteWait:
+  2476     01C2  188C               	btfsc	396,1	; wait for ((EECON1) and 07Fh), 1 to clear
+  2477     01C3  29C2               	goto	WriteWait
+  2478     01C4  110C               	bcf	396,2	; ((EECON1) and 07Fh), 2=0 disable write
+  2479     01C5  0008               	return
+  2480     01C6                     ReadEE:	
+  2481                           ;=================================================================
+  2482                           ; ReadEE ? read EEPROM at current idx into ASCII
+  2483                           ;=================================================================
+  2484                           
+  2485     01C6  1303  1283         	banksel	idx
+  2486     01C8  0821               	movf	idx,w	; get current index
+  2487     01C9  1703 1283          	banksel	269
+  2488     01CB  008D               	movwf	269	; set address
+  2489     01CC  1703 1683          	banksel	396
+  2490     01CE  138C               	bcf	396,7	; ((EECON1) and 07Fh), 7=0
+  2491     01CF  140C               	bsf	396,0	; ((EECON1) and 07Fh), 0=1 initiate read
+  2492     01D0  1703 1283          	banksel	268
+  2493     01D2  080C               	movf	268,w	; read data
+  2494     01D3  1303  1283         	banksel	ASCII
+  2495     01D5  00A0               	movwf	ASCII	; store in display register
+  2496     01D6  0008               	return
+  2497     01D7                     ShowASCII:	
+  2498                           ;=================================================================
+  2499                           ; ShowASCII ? output ASCII + DP bit to PORTC
+  2500                           ;=================================================================
+  2501                           
+  2502     01D7  1303  1283         	banksel	ASCII
+  2503     01D9  0820               	movf	ASCII,w	; get current character
+  2504     01DA  3880               	iorlw	128	; set bit7 (DP, not used but maintains pattern)
+  2505     01DB  1303 1283          	banksel	7
+  2506     01DD  0087               	movwf	7	; direct drive to display
+  2507     01DE  1387               	bcf	7,7	; ensure latch low
+  2508     01DF  0000               	nop	; small delay
+  2509     01E0  0000               	nop
+  2510     01E1  0008               	return
+  2511                           
+  2512                           	psect	edata
+  2513     0000                     stk_offset      set	0
+  2514     0000                     auto_size       set	0
+  2515                           
+  2516                           ; stack_auto defines a symbol /name/_offset which equates to the
+  2517                           ; stack offset of the auto object in question
+  2518     0000                     
+  2519                           ; stack_param defines a symbol /name/_offset which equates to the
+  2520                           ; stack offset of the parameter object in question
+  2521     0000                     
+  2522                           ; alloc_stack adjusts the SP to allocate space for auto objects
+  2523                           ; it also links in to the btemp symbol so that can be used
+  2524     0000                     
+  2525                           ; restore_stack adjusts the SP to remove all auto and parameter
+  2526                           ; objects from the stack prior to returning from a function
+  2527     0000                     
+  2528                           	psect	resetVect
+  2529                           
+  2530                           ;=================================================================
+  2531                           ; Reset vector
+  2532                           ;=================================================================
+  2533     0000  2820               	goto	Start	; jump to initialization
+  2534                           
+  2535                           	psect	config
+  2536                           
+  2537                           ;Config register CONFIG1 @ 0x2007
+  2538                           ;	Oscillator Selection bits
+  2539                           ;	FOSC = XT, XT oscillator: Crystal/resonator on RA6/OSC2/CLKOUT and RA7/OSC1/CLKIN
+  2540                           ;	Watchdog Timer Enable bit
+  2541                           ;	WDTE = OFF, WDT disabled and can be enabled by SWDTEN bit of the WDTCON register
+  2542                           ;	Power-up Timer Enable bit
+  2543                           ;	PWRTE = OFF, PWRT disabled
+  2544                           ;	RE3/MCLR pin function select bit
+  2545                           ;	MCLRE = ON, RE3/MCLR pin function is MCLR
+  2546                           ;	Code Protection bit
+  2547                           ;	CP = OFF, Program memory code protection is disabled
+  2548                           ;	Data Code Protection bit
+  2549                           ;	CPD = OFF, Data memory code protection is disabled
+  2550                           ;	Brown Out Reset Selection bits
+  2551                           ;	BOREN = OFF, BOR disabled
+  2552                           ;	Internal External Switchover bit
+  2553                           ;	IESO = OFF, Internal/External Switchover mode is disabled
+  2554                           ;	Fail-Safe Clock Monitor Enabled bit
+  2555                           ;	FCMEN = OFF, Fail-Safe Clock Monitor is disabled
+  2556                           ;	Low Voltage Programming Enable bit
+  2557                           ;	LVP = OFF, RB3 pin has digital I/O, HV on MCLR must be used for programming
+  2558                           ;	In-Circuit Debugger Mode bit
+  2559                           ;	DEBUG = 0x1, unprogrammed default
+  2560     2007                     	org	8199
+  2561     2007  20F1               	dw	8433
+  2562                           
+  2563                           ;Config register CONFIG2 @ 0x2008
+  2564                           ;	Brown-out Reset Selection bit
+  2565                           ;	BOR4V = 0x1, unprogrammed default
+  2566                           ;	Flash Program Memory Self Write Enable bits
+  2567                           ;	WRT = OFF, Write protection off
+  2568     2008                     	org	8200
+  2569     2008  3FFF               	dw	16383
 
 
 Microchip Technology PIC Macro Assembler V3.10 build 20250813170317 
-Symbol Table                                                                                               Thu Nov 13 13:04:36 2025
+Symbol Table                                                                                               Mon Nov 17 13:41:13 2025
 
-                           L1 0189                             L2 018B                             L3 018D  
-                          KEY 0027                            idx 0021                           D2L1 0196  
-                         D2L2 0198                           D2L3 019A                           R0C1 00EF  
-                         R0C2 00F4                           R0C3 00F9                           R1C1 010A  
-                         R1C2 010F                           R1C3 0114                           R2C1 0125  
-                         R2C2 012A                           R2C3 012F                           R3C1 0140  
-                         R3C2 0145                           R3C3 014A                           Row1 00FE  
-                         Row2 0119                           Row3 0134                           tmp1 0024  
-                         tmp2 0025                           tmp3 0026                          EEADR 010D  
-                        ASCII 0020                          ANSEL 0188                          PORTA 0005  
-                        PORTB 0006                          PORTC 0007                          TRISA 0085  
-                        TRISB 0086                          TRISC 0087                          Start 0020  
-                        flags 0023                         EEDATA 010C                         EECON1 018C  
-                       EECON2 018D                         ANSELH 0189                         STATUS 0003  
-                       ReadEE 016B                    RecordDelay 00AC                        CM1CON0 0107  
-                      CM2CON0 0108                        Delay1s 0187                        ScanEnd 014F  
-                  ShowRecordR 006B                        WriteEE 0152                   RecordOrPlay 0093  
-                   OPTION_REG 0081                       FillLoop 0045                       MainLoop 005D  
-                     ExitPlay 00CA                       PlayLoop 00BF                     Delay200ms 0194  
-                     buttonsA 0028                     ExitRecord 00AE                     KeypadScan 00DD  
-                   RecordLoop 009A                      CheckPlay 0086                      IdleDelay 00DB  
-                    ShowASCII 017C                      WriteWait 0167                 CheckRecordBtn 0076  
+                          KEY 0029                 prev_key_state 0024                            idx 0021  
+                         R0C1 014A                           R0C2 014F                           R0C3 0154  
+                         R1C1 0165                           R1C2 016A                           R1C3 016F  
+                         R2C1 0180                           R2C2 0185                           R2C3 018A  
+                         R3C1 019B                           R3C2 01A0                           R3C3 01A5  
+                         TMR0 0001                           Row1 0159                           Row2 0174  
+                         Row3 018F                           tmp1 0027                           tmp2 0028  
+                        EEADR 010D                          ASCII 0020                          ANSEL 0188  
+                        PORTA 0005                          PORTB 0006                          PORTC 0007  
+                        TRISA 0085                          TRISB 0086                          TRISC 0087  
+                        ShowS 00D5                          Start 0020                          flags 0023  
+                  ReadButtons 0119                   LoadKeyCount 00F3                         EEDATA 010C  
+                 LoadFirstVal 0122                         EECON1 018C                         EECON2 018D  
+                       ANSELH 0189                         INTCON 000B                         STATUS 0003  
+                       ReadEE 01C6                        CM1CON0 0107                        CM2CON0 0108  
+                KeyPressedNow 0082                        DelayMs 00E6                        ScanEnd 01AA  
+                  ShowRifZero 009B                        WriteEE 01AD                   RecordOrPlay 006E  
+                 SaveKeyCount 0102                     OPTION_REG 0081                       MainLoop 004B  
+                     ExitMode 0133                       ExitPlay 00C5                       PlayLoop 00B7  
+                     SaveWait 0115                       JustPoll 00A5                     DoShowWait 00D9  
+                     buttonsA 002A                    idle_toggle 0025                     ExitRecord 00A8  
+                   KeypadScan 0138                     ReachedTen 0095                     RecordLoop 0075  
+                DelayMs_Inner 00E9                    first_value 0026                      CheckPlay 0061  
+                 CheckKeyEdge 0079                      IdleBlink 00CA                   DelayMs_Loop 00E7  
+                 DelayMs_Wait 00EB                      ShowASCII 01D7                      WriteWait 01C2  
                     key_count 0022  

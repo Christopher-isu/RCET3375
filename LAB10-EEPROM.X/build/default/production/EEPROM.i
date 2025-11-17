@@ -6,21 +6,20 @@
 # 1 "<built-in>" 2
 # 1 "EEPROM.S" 2
 ;=================================================================
-; EEPROM core + 10-key overwrite on RA0 low + playback on RA2 low
-; Full 4x4 keypad scan, "R" blink during record, merge-ready
+; VERSION 2.6.6 ? FINAL: Play stops exactly at recorded count
+; Only change from v2.6.5: PlayLoop comparison fixed to use key_count
 ;=================================================================
-
-    CONFIG FOSC = XT
-    CONFIG WDTE = OFF
-    CONFIG PWRTE = OFF
-    CONFIG MCLRE = ON
-    CONFIG CP = OFF
-    CONFIG CPD = OFF
-    CONFIG BOREN = OFF
-    CONFIG IESO = OFF
-    CONFIG FCMEN = OFF
-    CONFIG LVP = OFF
-    CONFIG WRT = OFF
+    CONFIG FOSC = XT ; external 4 MHz XT oscillator
+    CONFIG WDTE = OFF ; watchdog timer disabled
+    CONFIG PWRTE = OFF ; power-up timer disabled
+    CONFIG MCLRE = ON ; MCLR pin used as reset
+    CONFIG CP = OFF ; code protection off
+    CONFIG CPD = OFF ; data EEPROM protection off
+    CONFIG BOREN = OFF ; brown-out reset disabled
+    CONFIG IESO = OFF ; internal/external oscillator switchover off
+    CONFIG FCMEN = OFF ; fail-safe clock monitor off
+    CONFIG LVP = OFF ; low-voltage programming off
+    CONFIG WRT = OFF ; write protection off
 
 # 1 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include/xc.inc" 1 3
 
@@ -2330,281 +2329,393 @@ stk_offset SET 0
 auto_size SET 0
 ENDM
 # 8 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include/xc.inc" 2 3
-# 19 "EEPROM.S" 2
+# 18 "EEPROM.S" 2
 
 ;=================================================================
-; Variables
+; RAM variables ? all in bank 0
 ;=================================================================
     PSECT udata_bank0
-ASCII: DS 1 ; current display char / write buffer
-idx: DS 1 ; EEPROM address 0-9
-key_count: DS 1 ; keys stored in record mode (0-9)
-flags: DS 1 ; bit0=record_flag, bit1=play_flag
-tmp1: DS 1 ; delay
-tmp2: DS 1
-tmp3: DS 1
-KEY: DS 1 ; keypad hit flag (bit0)
-buttonsA: DS 1 ; ((PORTA) and 07Fh), 0 -((PORTA) and 07Fh), 2 state (inverted: pressed=1)
+ASCII: DS 1 ; current character to display (7-bit ASCII)
+idx: DS 1 ; current EEPROM address pointer (0?9)
+key_count: DS 1 ; number of valid characters stored (0?10), binary, saved at 0x0A
+flags: DS 1 ; bit0 = Record mode active, bit1 = Play mode active
+prev_key_state: DS 1 ; bit0 = previous keypad press state (edge detection)
+idle_toggle: DS 1 ; bit0 toggles every 1s in idle for 'S' / first-char blink
+first_value: DS 1 ; cached copy of EEPROM[0] for idle display
+tmp1: DS 1 ; DelayMs outer loop counter
+tmp2: DS 1 ; DelayMs inner loop counter
+KEY: DS 1 ; bit0 set when KeypadScan detects any key press
+buttonsA: DS 1 ; bit0=Record btn, bit1=Stop btn, bit2=Play btn (active-high after inversion)
 
 ;=================================================================
 ; Reset vector
 ;=================================================================
     PSECT resetVect,class=CODE,delta=2
-    GOTO Start
+    GOTO Start ; jump to initialization
 
 ;=================================================================
-; Code section
+; Main code section
 ;=================================================================
     PSECT code,class=CODE,delta=2
 
 Start:
-    ;--- Port config - identical to reference -------------------------
     BANKSEL TRISB
-    MOVLW 0b11110000 ; ((PORTB) and 07Fh), 0 -3 out, ((PORTB) and 07Fh), 4 -7 in
-    MOVWF TRISB
-
+    MOVLW 0b11110000 ; ((PORTB) and 07Fh), 7?((PORTB) and 07Fh), 4 inputs (keypad columns), ((PORTB) and 07Fh), 3?((PORTB) and 07Fh), 0 outputs (rows)
+    MOVWF TRISB ; configure keypad port direction
     BANKSEL TRISC
-    CLRF TRISC ; PORTC full output
-
+    CLRF TRISC ; PORTC all outputs ? drives dot-matrix display
     BANKSEL TRISA
-    MOVLW 0b00000111 ; ((PORTA) and 07Fh), 0 -((PORTA) and 07Fh), 2 inputs
-    MOVWF TRISA
+    MOVLW 0b00000111 ; ((PORTA) and 07Fh), 0?((PORTA) and 07Fh), 2 inputs for Record/Stop/Play buttons
+    MOVWF TRISA ; configure button inputs
+    BANKSEL ANSEL
+    CLRF ANSEL ; disable analog on PORTA
+    CLRF ANSELH ; disable analog on PORTB
+    BANKSEL CM1CON0
+    CLRF CM1CON0 ; disable comparator 1
+    CLRF CM2CON0 ; disable comparator 2
+    BANKSEL PORTC
+    CLRF PORTC ; clear display at startup
 
     BANKSEL OPTION_REG
-    BCF OPTION_REG,7 ; weak pull-ups (circuit)
+    MOVLW 0b00000001 ; prescaler to TMR0, ratio 1:4 for accurate timing
+    MOVWF OPTION_REG ; configure Timer0 prescaler
 
-    BANKSEL ANSEL
-    CLRF ANSEL
-    CLRF ANSELH ; all digital
-
-    BANKSEL CM1CON0
-    CLRF CM1CON0
-    CLRF CM2CON0 ; comparators off
-
-    BANKSEL PORTC
-    CLRF PORTC
-
-    ;--- Init variables -----------------------------------------------
     BANKSEL flags
-    CLRF flags
+    CLRF flags ; clear all mode flags
     BANKSEL idx
-    CLRF idx
+    CLRF idx ; initialize EEPROM pointer
     BANKSEL key_count
-    CLRF key_count
+    CLRF key_count ; initialize stored count
+    BANKSEL prev_key_state
+    CLRF prev_key_state ; no previous key press
+    BANKSEL idle_toggle
+    CLRF idle_toggle ; start idle showing first character
 
-    ;--- Fill EEPROM 0x00-0x09 with '1'..'A' once --------------------
-    MOVLW 0x31 ; '1'
-    MOVWF ASCII
-    CLRF idx
-FillLoop:
-    CALL WriteEE
-    BANKSEL ASCII
-    INCF ASCII,F
-    BANKSEL idx
-    INCF idx,F
-    MOVLW 10
-    SUBWF idx,W
-    BTFSS STATUS,2
-    GOTO FillLoop
-
-    ;--- Load first value for display --------------------------------
-    BANKSEL EEADR
-    CLRF EEADR
-    BANKSEL EECON1
-    BCF EECON1,7
-    BSF EECON1,0 ; ((EECON1) and 07Fh), 0
-    BANKSEL EEDATA
-    MOVF EEDATA,W
-    BANKSEL ASCII
-    MOVWF ASCII
+    CALL LoadKeyCount ; restore saved key_count from EEPROM[0x0A]
+    CALL LoadFirstVal ; load first recorded character for idle display
 
 ;=================================================================
-; Main loop
+; Main dispatcher ? checks buttons and active modes
 ;=================================================================
 MainLoop:
-    ;--- Show "R" blink while recording -------------------------------
+    CALL ReadButtons ; sample ((PORTA) and 07Fh), 0?((PORTA) and 07Fh), 2 into buttonsA (active-high)
+
     BANKSEL flags
-    BTFSC flags,0
-    GOTO ShowRecordR
+    BTFSC flags,0 ; is Record mode already active?
+    GOTO CheckPlay ; skip button check if yes
 
-    ;--- Normal display of current ASCII ------------------------------
-    CALL ShowASCII
-
-    ;--- Read ((PORTA) and 07Fh), 0 -((PORTA) and 07Fh), 2 (active low) -----------------------------------
-    BANKSEL PORTA
-    MOVF PORTA,W
-    ANDLW 0x07
-    XORLW 0x07 ; invert -> pressed = 1
     BANKSEL buttonsA
-    MOVWF buttonsA ; bit0=((PORTA) and 07Fh), 0(record), bit2=((PORTA) and 07Fh), 2(play)
+    BTFSS buttonsA,0 ; Record button pressed?
+    GOTO CheckPlay ; no ? skip
 
-    GOTO CheckRecordBtn
-
-ShowRecordR:
-    MOVLW 'R' | 0b10000000
-    BANKSEL PORTC
-    MOVWF PORTC
-    BCF PORTC,7
-    CALL Delay1s
-    BANKSEL PORTC
-    CLRF PORTC
-    CALL Delay1s
-    GOTO MainLoop
-
-CheckRecordBtn:
-    ;--- Enter RECORD on ((PORTA) and 07Fh), 0 first press -----------------------------
-    BANKSEL flags
-    BTFSC flags,0
-    GOTO CheckPlay
-    BANKSEL buttonsA
-    BTFSS buttonsA,0 ; ((PORTA) and 07Fh), 0 pressed?
-    GOTO CheckPlay
-    BSF flags,0 ; set record_flag
-    BANKSEL key_count
-    CLRF key_count
-    BANKSEL idx
-    CLRF idx
-    GOTO RecordLoop
-
-CheckPlay:
-    ;--- Enter PLAY on ((PORTA) and 07Fh), 2 first press -------------------------------
-    BANKSEL flags
-    BTFSC flags,1
-    GOTO RecordOrPlay
-    BANKSEL buttonsA
-    BTFSS buttonsA,2 ; ((PORTA) and 07Fh), 2 pressed?
-    GOTO RecordOrPlay
-    BSF flags,1 ; set play_flag
-    BANKSEL idx
-    CLRF idx
-    GOTO PlayLoop
-
-RecordOrPlay:
-    ;--- Dispatch to active mode -------------------------------------
-    BANKSEL flags
-    BTFSC flags,0
-    GOTO RecordLoop
-    BTFSC flags,1
-    GOTO PlayLoop
-    GOTO IdleDelay
-
-;=================================================================
-; RECORD mode - wait for 10 keypad entries
-;=================================================================
-RecordLoop:
-    CALL KeypadScan ; fills ASCII, sets KEY,0 on hit
-    BANKSEL KEY
-    BTFSS KEY,0 ; key pressed?
-    GOTO RecordDelay
-    ;--- Store key ---------------------------------------------------
-    CALL WriteEE
-    BANKSEL key_count
-    INCF key_count,F
-    BANKSEL idx
-    INCF idx,F
-    ;--- Brief feedback (0.2s) ---------------------------------------
-    CALL ShowASCII
-    CALL Delay200ms
-    ;--- Check completion --------------------------------------------
-    MOVLW 10
-    SUBWF key_count,W
-    BTFSC STATUS,2
-    GOTO ExitRecord
-
-RecordDelay:
-    CALL Delay1s
-    GOTO RecordLoop
-
-ExitRecord:
-    BANKSEL flags
-    BCF flags,0 ; clear record_flag
-    ;--- Reload first value ------------------------------------------
-    BANKSEL EEADR
-    CLRF EEADR
-    BANKSEL EECON1
-    BCF EECON1,7
-    BSF EECON1,0
-    BANKSEL EEDATA
-    MOVF EEDATA,W
+    MOVLW 'R' ; show 'R' during entry
     BANKSEL ASCII
     MOVWF ASCII
-    GOTO MainLoop
+    CALL ShowASCII ; display 'R'
+
+    BSF flags,0 ; enter Record mode
+    BANKSEL idx
+    CLRF idx ; start writing from address 0
+    BANKSEL prev_key_state
+    CLRF prev_key_state ; clear edge detector
+    GOTO RecordLoop ; begin recording
+
+CheckPlay:
+    BANKSEL flags
+    BTFSC flags,1 ; is Play mode already active?
+    GOTO RecordOrPlay ; skip button check
+
+    BANKSEL buttonsA
+    BTFSS buttonsA,2 ; Play button pressed?
+    GOTO RecordOrPlay ; no ? skip
+
+    BSF flags,1 ; enter Play mode
+    BANKSEL idx
+    CLRF idx ; start reading from address 0
+    GOTO PlayLoop ; begin playback
+
+RecordOrPlay:
+    BANKSEL flags
+    BTFSC flags,0 ; Record mode active?
+    GOTO RecordLoop
+    BTFSC flags,1 ; Play mode active?
+    GOTO PlayLoop
+    GOTO IdleBlink ; no mode ? idle state
 
 ;=================================================================
-; PLAY mode - cycle 10 values once
+; RECORD mode ? edge-triggered keypad, stops at 10 or Stop button
+;=================================================================
+RecordLoop:
+    CALL ReadButtons ; check for Stop button
+
+    BTFSS buttonsA,1 ; Stop button pressed?
+    GOTO CheckKeyEdge ; no ? continue
+    GOTO ExitRecord ; yes ? exit recording
+
+CheckKeyEdge:
+    CALL KeypadScan ; scan keypad, fill ASCII and set KEY,0 on press
+
+    BANKSEL KEY
+    BTFSC KEY,0 ; any key pressed?
+    GOTO KeyPressedNow ; yes ? process
+    BANKSEL prev_key_state
+    CLRF prev_key_state ; key released ? clear edge
+    GOTO ShowRifZero ; show 'R' if nothing recorded
+
+KeyPressedNow:
+    BANKSEL prev_key_state
+    BTFSC prev_key_state,0 ; was key already down?
+    GOTO RecordLoop ; yes ? ignore repeat
+    BSF prev_key_state,0 ; remember key is down
+
+    CALL WriteEE ; store ASCII at current idx
+    BANKSEL key_count
+    INCF key_count,F ; increment stored count
+    CALL SaveKeyCount ; persist count immediately
+    BANKSEL idx
+    INCF idx,F ; advance pointer
+    MOVLW 10
+    SUBWF idx,W ; compare idx with 10
+    BTFSC STATUS,2 ; Z=1 ? idx == 10?
+    GOTO ReachedTen ; yes ? cap and exit
+
+    CALL ShowASCII ; echo pressed character
+    GOTO RecordLoop ; continue recording
+
+ReachedTen:
+    BANKSEL key_count
+    MOVLW 10 ; force maximum count
+    MOVWF key_count
+    CALL SaveKeyCount ; persist capped count
+    GOTO ExitRecord ; exit recording
+
+ShowRifZero:
+    BANKSEL key_count
+    MOVF key_count,W
+    BTFSS STATUS,2 ; Z=1 ? nothing recorded?
+    GOTO JustPoll ; no ? skip 'R' display
+    MOVLW 'R'
+    BANKSEL ASCII
+    MOVWF ASCII
+    CALL ShowASCII ; show 'R' when idle in record mode
+
+JustPoll:
+    MOVLW 10
+    CALL DelayMs ; 10 ms non-blocking poll delay
+    GOTO RecordLoop ; continue loop
+
+ExitRecord:
+    BANKSEL idx
+    MOVF idx,W ; idx = actual number of chars written
+    BANKSEL key_count
+    MOVWF key_count ; sync count with reality
+    CALL SaveKeyCount ; persist final count
+
+    BANKSEL flags
+    BCF flags,0 ; clear Record mode flag
+    BANKSEL prev_key_state
+    CLRF prev_key_state ; clear edge detector
+    CALL ExitMode ; refresh idle display
+    GOTO MainLoop ; return to dispatcher
+
+;=================================================================
+; PLAY mode ? displays each character for 1 second, stops at key_count
 ;=================================================================
 PlayLoop:
-    CALL ReadEE ; -> ASCII
-    CALL ShowASCII
-    CALL Delay1s
+    CALL ReadEE ; load EEPROM[idx] into ASCII
+    CALL ShowASCII ; display current character
+    MOVLW 1000
+    CALL DelayMs ; hold for 1 second
+
     BANKSEL idx
-    INCF idx,F
-    MOVLW 10
-    SUBWF idx,W
-    BTFSC STATUS,2
-    GOTO ExitPlay
-    GOTO PlayLoop
+    INCF idx,F ; advance to next address
+
+    BANKSEL key_count
+    MOVF idx,W
+    SUBWF key_count,W ; W = key_count - idx
+    BTFSC STATUS,2 ; Z=1 ? idx == key_count?
+    GOTO ExitPlay ; yes ? playback complete
+
+    GOTO PlayLoop ; continue playback
 
 ExitPlay:
     BANKSEL flags
-    BCF flags,1 ; clear play_flag
-    ;--- Reload first value ------------------------------------------
-    BANKSEL EEADR
-    CLRF EEADR
-    BANKSEL EECON1
-    BCF EECON1,7
-    BSF EECON1,0
-    BANKSEL EEDATA
-    MOVF EEDATA,W
-    BANKSEL ASCII
-    MOVWF ASCII
-    GOTO MainLoop
-
-IdleDelay:
-    CALL Delay1s
-    GOTO MainLoop
+    BCF flags,1 ; clear Play mode flag
+    CALL ExitMode ; refresh idle display
+    GOTO MainLoop ; return to dispatcher
 
 ;=================================================================
-; KeypadScan ? full 4×4 scan, identical to reference
+; IDLE mode ? blink 'S' ? first stored character every 1 second
+;=================================================================
+IdleBlink:
+    BANKSEL idle_toggle
+    BTFSC idle_toggle,0 ; toggle bit set?
+    GOTO ShowS ; yes ? show 'S'
+
+    BANKSEL first_value
+    MOVF first_value,W ; load cached first character
+    BANKSEL ASCII
+    MOVWF ASCII ; prepare for display
+    GOTO DoShowWait
+
+ShowS:
+    MOVLW 'S' ; load 'S' for start indication
+    BANKSEL ASCII
+    MOVWF ASCII ; prepare 'S' for display
+
+DoShowWait:
+    CALL ShowASCII ; output current symbol
+    MOVLW 1000
+    CALL DelayMs ; hold for 1 second
+
+    BANKSEL idle_toggle
+    MOVLW 1
+    XORWF idle_toggle,F ; toggle bit 0 for next cycle
+
+    CALL ReadButtons ; allow instant exit on button press
+    BTFSC buttonsA,0 ; Record button?
+    GOTO MainLoop
+    BTFSC buttonsA,2 ; Play button?
+    GOTO MainLoop
+
+    GOTO IdleBlink ; continue blinking
+
+;=================================================================
+; DelayMs ? TMR0-based delay, ~1 ms × W (prescaler 1:4)
+;=================================================================
+DelayMs:
+    MOVWF tmp1 ; store requested milliseconds
+DelayMs_Loop:
+    MOVLW 4 ; 4 × 250 µs loops per ms
+    MOVWF tmp2 ; inner counter
+DelayMs_Inner:
+    MOVLW 6 ; TMR0 preload for ~250 µs
+    MOVWF TMR0 ; start timer
+DelayMs_Wait:
+    BTFSS INTCON,2 ; wait for overflow
+    GOTO DelayMs_Wait
+    BCF INTCON,2 ; clear ((INTCON) and 07Fh), 2
+    DECFSZ tmp2,F ; inner loop done?
+    GOTO DelayMs_Inner
+    DECFSZ tmp1,F ; outer loop done?
+    GOTO DelayMs_Loop
+    RETURN ; delay complete
+
+;=================================================================
+; LoadKeyCount ? restore binary count from EEPROM address 0x0A
+;=================================================================
+LoadKeyCount:
+    BANKSEL EEADR
+    MOVLW 0x0A ; address of count storage
+    MOVWF EEADR ; set address
+    BANKSEL EECON1
+    BCF EECON1,7 ; ((EECON1) and 07Fh), 7=0 ? data EEPROM
+    BSF EECON1,0 ; ((EECON1) and 07Fh), 0=1 ? initiate read
+    BANKSEL EEDATA
+    MOVF EEDATA,W ; read byte
+    BANKSEL key_count
+    MOVWF key_count ; restore into RAM
+    RETURN
+
+;=================================================================
+; SaveKeyCount ? write current key_count to EEPROM address 0x0A
+;=================================================================
+SaveKeyCount:
+    BANKSEL EEADR
+    MOVLW 0x0A ; target address
+    MOVWF EEADR
+    BANKSEL key_count
+    MOVF key_count,W ; get current count
+    BANKSEL EEDATA
+    MOVWF EEDATA ; place into data register
+    BANKSEL EECON1
+    BCF EECON1,7 ; ((EECON1) and 07Fh), 7=0
+    BSF EECON1,2 ; ((EECON1) and 07Fh), 2=1 enable write
+    MOVLW 0x55
+    MOVWF EECON2 ; unlock sequence
+    MOVLW 0xAA
+    MOVWF EECON2
+    BSF EECON1,1 ; ((EECON1) and 07Fh), 1=1 start write
+SaveWait:
+    BTFSC EECON1,1 ; wait for completion
+    GOTO SaveWait
+    BCF EECON1,2 ; ((EECON1) and 07Fh), 2=0 disable write
+    RETURN
+
+;=================================================================
+; ReadButtons ? sample ((PORTA) and 07Fh), 0?((PORTA) and 07Fh), 2, invert logic (active-high)
+;=================================================================
+ReadButtons:
+    BANKSEL PORTA
+    MOVF PORTA,W ; read PORTA
+    ANDLW 0x07 ; mask ((PORTA) and 07Fh), 0?((PORTA) and 07Fh), 2
+    XORLW 0x07 ; invert (external pull-downs)
+    BANKSEL buttonsA
+    MOVWF buttonsA ; store result
+    RETURN
+
+;=================================================================
+; LoadFirstVal ? read EEPROM[0] into first_value and ASCII
+;=================================================================
+LoadFirstVal:
+    BANKSEL EEADR
+    CLRF EEADR ; address 0
+    BANKSEL EECON1
+    BCF EECON1,7 ; ((EECON1) and 07Fh), 7=0
+    BSF EECON1,0 ; ((EECON1) and 07Fh), 0=1 initiate read
+    BANKSEL EEDATA
+    MOVF EEDATA,W ; get byte
+    BANKSEL first_value
+    MOVWF first_value ; cache for idle blink
+    BANKSEL ASCII
+    MOVWF ASCII ; display immediately
+    RETURN
+
+;=================================================================
+; ExitMode ? common exit cleanup for Record and Play
+;=================================================================
+ExitMode:
+    CALL LoadFirstVal ; refresh first character
+    BANKSEL idle_toggle
+    CLRF idle_toggle ; force next idle to show first char
+    GOTO MainLoop ; return to main dispatcher
+
+;=================================================================
+; KeypadScan ? 4×4 matrix scan, fills ASCII and sets KEY,0
 ;=================================================================
 KeypadScan:
     BANKSEL KEY
-    CLRF KEY
+    CLRF KEY ; clear key detected flag
     BANKSEL ASCII
-    CLRF ASCII
+    CLRF ASCII ; clear output
 
-    ;--- Row 0 --------------------------------------------------------
     MOVLW 0b11110000
-    ANDWF PORTB,F
+    ANDWF PORTB,F ; clear row drive bits
     MOVLW 0b00000001
-    IORWF PORTB,F
-    NOP
+    IORWF PORTB,F ; drive row 0
+    NOP ; settle time
     BANKSEL PORTB
     BTFSS PORTB,4
     GOTO R0C1
     MOVLW '1'
     MOVWF ASCII
     BSF KEY,0
-R0C1:
-    BTFSS PORTB,5
+R0C1: BTFSS PORTB,5
     GOTO R0C2
     MOVLW '2'
     MOVWF ASCII
     BSF KEY,0
-R0C2:
-    BTFSS PORTB,6
+R0C2: BTFSS PORTB,6
     GOTO R0C3
     MOVLW '3'
     MOVWF ASCII
     BSF KEY,0
-R0C3:
-    BTFSS PORTB,7
+R0C3: BTFSS PORTB,7
     GOTO Row1
     MOVLW 'A'
     MOVWF ASCII
     BSF KEY,0
 
-    ;--- Row 1 --------------------------------------------------------
 Row1:
     MOVLW 0b11110000
     ANDWF PORTB,F
@@ -2617,26 +2728,22 @@ Row1:
     MOVLW '4'
     MOVWF ASCII
     BSF KEY,0
-R1C1:
-    BTFSS PORTB,5
+R1C1: BTFSS PORTB,5
     GOTO R1C2
     MOVLW '5'
     MOVWF ASCII
     BSF KEY,0
-R1C2:
-    BTFSS PORTB,6
+R1C2: BTFSS PORTB,6
     GOTO R1C3
     MOVLW '6'
     MOVWF ASCII
     BSF KEY,0
-R1C3:
-    BTFSS PORTB,7
+R1C3: BTFSS PORTB,7
     GOTO Row2
     MOVLW 'B'
     MOVWF ASCII
     BSF KEY,0
 
-    ;--- Row 2 --------------------------------------------------------
 Row2:
     MOVLW 0b11110000
     ANDWF PORTB,F
@@ -2649,26 +2756,22 @@ Row2:
     MOVLW '7'
     MOVWF ASCII
     BSF KEY,0
-R2C1:
-    BTFSS PORTB,5
+R2C1: BTFSS PORTB,5
     GOTO R2C2
     MOVLW '8'
     MOVWF ASCII
     BSF KEY,0
-R2C2:
-    BTFSS PORTB,6
+R2C2: BTFSS PORTB,6
     GOTO R2C3
     MOVLW '9'
     MOVWF ASCII
     BSF KEY,0
-R2C3:
-    BTFSS PORTB,7
+R2C3: BTFSS PORTB,7
     GOTO Row3
     MOVLW 'C'
     MOVWF ASCII
     BSF KEY,0
 
-    ;--- Row 3 --------------------------------------------------------
 Row3:
     MOVLW 0b11110000
     ANDWF PORTB,F
@@ -2681,20 +2784,17 @@ Row3:
     MOVLW '*'
     MOVWF ASCII
     BSF KEY,0
-R3C1:
-    BTFSS PORTB,5
+R3C1: BTFSS PORTB,5
     GOTO R3C2
     MOVLW '0'
     MOVWF ASCII
     BSF KEY,0
-R3C2:
-    BTFSS PORTB,6
+R3C2: BTFSS PORTB,6
     GOTO R3C3
     MOVLW '#'
     MOVWF ASCII
     BSF KEY,0
-R3C3:
-    BTFSS PORTB,7
+R3C3: BTFSS PORTB,7
     GOTO ScanEnd
     MOVLW 'D'
     MOVWF ASCII
@@ -2702,103 +2802,64 @@ R3C3:
 
 ScanEnd:
     MOVLW 0b11110000
-    ANDWF PORTB,F
+    ANDWF PORTB,F ; return rows to idle state
     RETURN
 
 ;=================================================================
-; EEPROM write - polling, no interrupt
+; WriteEE ? write ASCII to EEPROM at current idx (0?9)
 ;=================================================================
 WriteEE:
     BANKSEL idx
-    MOVF idx,W
+    MOVF idx,W ; get current index
     BANKSEL EEADR
-    MOVWF EEADR
+    MOVWF EEADR ; set EEPROM address
     BANKSEL ASCII
-    MOVF ASCII,W
+    MOVF ASCII,W ; get character
     BANKSEL EEDATA
-    MOVWF EEDATA
+    MOVWF EEDATA ; place in data register
     BANKSEL EECON1
-    BCF EECON1,7 ; data EE
-    BSF EECON1,2 ; ((EECON1) and 07Fh), 2
+    BCF EECON1,7 ; ((EECON1) and 07Fh), 7=0 data EEPROM
+    BSF EECON1,2 ; ((EECON1) and 07Fh), 2=1 enable write
     MOVLW 0x55
-    MOVWF EECON2
+    MOVWF EECON2 ; unlock sequence part 1
     MOVLW 0xAA
-    MOVWF EECON2
-    BSF EECON1,1 ; ((EECON1) and 07Fh), 1
+    MOVWF EECON2 ; unlock sequence part 2
+    BSF EECON1,1 ; ((EECON1) and 07Fh), 1=1 start write
 WriteWait:
-    BTFSC EECON1,1
+    BTFSC EECON1,1 ; wait for ((EECON1) and 07Fh), 1 to clear
     GOTO WriteWait
-    BCF EECON1,2
+    BCF EECON1,2 ; ((EECON1) and 07Fh), 2=0 disable write
     RETURN
 
 ;=================================================================
-; EEPROM read
+; ReadEE ? read EEPROM at current idx into ASCII
 ;=================================================================
 ReadEE:
     BANKSEL idx
-    MOVF idx,W
+    MOVF idx,W ; get current index
     BANKSEL EEADR
-    MOVWF EEADR
+    MOVWF EEADR ; set address
     BANKSEL EECON1
-    BCF EECON1,7
-    BSF EECON1,0 ; ((EECON1) and 07Fh), 0
+    BCF EECON1,7 ; ((EECON1) and 07Fh), 7=0
+    BSF EECON1,0 ; ((EECON1) and 07Fh), 0=1 initiate read
     BANKSEL EEDATA
-    MOVF EEDATA,W
+    MOVF EEDATA,W ; read data
     BANKSEL ASCII
-    MOVWF ASCII
+    MOVWF ASCII ; store in display register
     RETURN
 
 ;=================================================================
-; Display ASCII on PORTC (bit7=1, strobe off)
+; ShowASCII ? output ASCII + DP bit to PORTC
 ;=================================================================
 ShowASCII:
     BANKSEL ASCII
-    MOVF ASCII,W
-    IORLW 0b10000000
+    MOVF ASCII,W ; get current character
+    IORLW 0b10000000 ; set bit7 (DP, not used but maintains pattern)
     BANKSEL PORTC
-    MOVWF PORTC
-    BCF PORTC,7
+    MOVWF PORTC ; direct drive to display
+    BCF PORTC,7 ; ensure latch low
+    NOP ; small delay
     NOP
-    NOP
-    RETURN
-
-;=================================================================
-; 1 second delay - identical to reference
-;=================================================================
-Delay1s:
-    MOVLW 0x04
-    MOVWF tmp1
-L1: MOVLW 0xFF
-    MOVWF tmp2
-L2: MOVLW 0xC8
-    MOVWF tmp3
-L3: DECFSZ tmp3,F
-    GOTO L3
-    DECFSZ tmp2,F
-    GOTO L2
-    DECFSZ tmp1,F
-    GOTO L1
-    RETURN
-
-;=================================================================
-; 200 ms feedback delay (record mode)
-;=================================================================
-Delay200ms:
-    MOVLW 0x01
-    MOVWF tmp1
-D2L1:
-    MOVLW 0xFF
-    MOVWF tmp2
-D2L2:
-    MOVLW 0x32 ; ~200 ms at 4 MHz
-    MOVWF tmp3
-D2L3:
-    DECFSZ tmp3,F
-    GOTO D2L3
-    DECFSZ tmp2,F
-    GOTO D2L2
-    DECFSZ tmp1,F
-    GOTO D2L1
     RETURN
 
     END
