@@ -1,0 +1,259 @@
+[p GLOBOPT AUTOSTATIC IEEE_DBL IEEE_FLT PIC14 PIC14E ]
+[d version 1.1 ]
+[d edition pro ]
+[d chip 16F1788 ]
+[d frameptr 6 ]
+"62 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/adc/src/adc.c
+[e E5686 . `uc
+posChannel_DAC4 24
+posChannel_DAC3 25
+posChannel_DAC2 28
+posChannel_Temperature 29
+posChannel_DAC1 30
+posChannel_FVR 31
+posChannel_AN0 0
+]
+"68
+[e E5695 . `uc
+negChannel_ADNREF 15
+negChannel_AN0 0
+]
+"10 C:\Program Files\Microchip\xc8\v3.10\pic\sources\c99\common\sprcadd.c
+[v ___fladd __fladd `(d  1 e 4 0 ]
+"4 C:\Program Files\Microchip\xc8\v3.10\pic\sources\c99\common\Umul8_16.c
+[v __Umul8_16 _Umul8_16 `(ui  1 e 2 0 ]
+"6 C:\Program Files\Microchip\xc8\v3.10\pic\sources\c99\pic\__eeprom.c
+[v ___eecpymem __eecpymem `(v  1 e 1 0 ]
+"39
+[v ___memcpyee __memcpyee `(v  1 e 1 0 ]
+"41 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\main.c
+[v _main main `(i  1 e 2 0 ]
+"41 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/adc/src/adc.c
+[v _ADC_Initialize ADC_Initialize `(v  1 e 1 0 ]
+"50 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/pwm/src/ccp1.c
+[v _CCP1_Initialize CCP1_Initialize `(v  1 e 1 0 ]
+"39 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/clock.c
+[v _CLOCK_Initialize CLOCK_Initialize `(v  1 e 1 0 ]
+"40 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/interrupt.c
+[v _INTERRUPT_Initialize INTERRUPT_Initialize `(v  1 e 1 0 ]
+"62
+[v _INT_CallBack INT_CallBack `(v  1 e 1 0 ]
+"71
+[v _INT_SetInterruptHandler INT_SetInterruptHandler `(v  1 e 1 0 ]
+"75
+[v _INT_DefaultInterruptHandler INT_DefaultInterruptHandler `(v  1 e 1 0 ]
+"38 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/pins.c
+[v _PIN_MANAGER_Initialize PIN_MANAGER_Initialize `(v  1 e 1 0 ]
+"39 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/system.c
+[v _SYSTEM_Initialize SYSTEM_Initialize `(v  1 e 1 0 ]
+"36 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/watchdog.c
+[v _WDT_Initialize WDT_Initialize `(v  1 e 1 0 ]
+"45 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/timer/src/tmr2.c
+[v _TMR2_Initialize TMR2_Initialize `(v  1 e 1 0 ]
+"109
+[v _TMR2_DefaultPeriodMatchCallback TMR2_DefaultPeriodMatchCallback `(v  1 s 1 TMR2_DefaultPeriodMatchCallback ]
+[s S389 . 1 `uc 1 IOCIF 1 0 :1:0 
+`uc 1 INTF 1 0 :1:1 
+`uc 1 TMR0IF 1 0 :1:2 
+`uc 1 IOCIE 1 0 :1:3 
+`uc 1 INTE 1 0 :1:4 
+`uc 1 TMR0IE 1 0 :1:5 
+`uc 1 PEIE 1 0 :1:6 
+`uc 1 GIE 1 0 :1:7 
+]
+"372 C:/Users/chris/.mchp_packs/Microchip/PIC12-16F1xxx_DFP/1.8.254/xc8\pic\include\proc/pic16f1788.h
+[s S398 . 1 `uc 1 . 1 0 :2:0 
+`uc 1 T0IF 1 0 :1:2 
+`uc 1 . 1 0 :2:3 
+`uc 1 T0IE 1 0 :1:5 
+]
+[u S403 . 1 `S389 1 . 1 0 `S398 1 . 1 0 ]
+[v _INTCONbits INTCONbits `VES403  1 e 1 @11 ]
+[s S27 . 1 `uc 1 TMR1IF 1 0 :1:0 
+`uc 1 TMR2IF 1 0 :1:1 
+`uc 1 CCP1IF 1 0 :1:2 
+`uc 1 SSP1IF 1 0 :1:3 
+`uc 1 TXIF 1 0 :1:4 
+`uc 1 RCIF 1 0 :1:5 
+`uc 1 ADIF 1 0 :1:6 
+`uc 1 TMR1GIF 1 0 :1:7 
+]
+"683
+[u S36 . 1 `S27 1 . 1 0 ]
+[v _PIR1bits PIR1bits `VES36  1 e 1 @17 ]
+"1082
+[v _TMR2 TMR2 `VEuc  1 e 1 @26 ]
+"1102
+[v _PR2 PR2 `VEuc  1 e 1 @27 ]
+"1122
+[v _T2CON T2CON `VEuc  1 e 1 @28 ]
+"1193
+[v _TRISA TRISA `VEuc  1 e 1 @140 ]
+"1263
+[v _TRISB TRISB `VEuc  1 e 1 @141 ]
+"1333
+[v _TRISC TRISC `VEuc  1 e 1 @142 ]
+"1403
+[v _TRISE TRISE `VEuc  1 e 1 @144 ]
+[s S193 . 1 `uc 1 PS0 1 0 :1:0 
+`uc 1 PS1 1 0 :1:1 
+`uc 1 PS2 1 0 :1:2 
+`uc 1 PSA 1 0 :1:3 
+`uc 1 TMR0SE 1 0 :1:4 
+`uc 1 TMR0CS 1 0 :1:5 
+`uc 1 INTEDG 1 0 :1:6 
+`uc 1 nWPUEN 1 0 :1:7 
+]
+"1671
+[s S202 . 1 `uc 1 PS 1 0 :3:0 
+`uc 1 . 1 0 :1:3 
+`uc 1 T0SE 1 0 :1:4 
+`uc 1 T0CS 1 0 :1:5 
+]
+[u S207 . 1 `S193 1 . 1 0 `S202 1 . 1 0 ]
+[v _OPTION_REGbits OPTION_REGbits `VES207  1 e 1 @149 ]
+"1788
+[v _WDTCON WDTCON `VEuc  1 e 1 @151 ]
+"1847
+[v _OSCTUNE OSCTUNE `VEuc  1 e 1 @152 ]
+"1905
+[v _OSCCON OSCCON `VEuc  1 e 1 @153 ]
+"2046
+[v _ADRESL ADRESL `VEuc  1 e 1 @155 ]
+"2066
+[v _ADRESH ADRESH `VEuc  1 e 1 @156 ]
+"2086
+[v _ADCON0 ADCON0 `VEuc  1 e 1 @157 ]
+"2181
+[v _ADCON1 ADCON1 `VEuc  1 e 1 @158 ]
+"2253
+[v _ADCON2 ADCON2 `VEuc  1 e 1 @159 ]
+"2329
+[v _LATA LATA `VEuc  1 e 1 @268 ]
+"2399
+[v _LATB LATB `VEuc  1 e 1 @269 ]
+"2469
+[v _LATC LATC `VEuc  1 e 1 @270 ]
+"2853
+[v _BORCON BORCON `VEuc  1 e 1 @278 ]
+"3356
+[v _APFCON1 APFCON1 `VEuc  1 e 1 @285 ]
+"3674
+[v _ANSELA ANSELA `VEuc  1 e 1 @396 ]
+"3739
+[v _ANSELB ANSELB `VEuc  1 e 1 @397 ]
+"3803
+[v _ANSELC ANSELC `VEuc  1 e 1 @398 ]
+"4914
+[v _WPUA WPUA `VEuc  1 e 1 @524 ]
+"4984
+[v _WPUB WPUB `VEuc  1 e 1 @525 ]
+"5054
+[v _WPUC WPUC `VEuc  1 e 1 @526 ]
+"5124
+[v _WPUE WPUE `VEuc  1 e 1 @528 ]
+"6551
+[v _ODCONA ODCONA `VEuc  1 e 1 @652 ]
+"6621
+[v _ODCONB ODCONB `VEuc  1 e 1 @653 ]
+"6691
+[v _ODCONC ODCONC `VEuc  1 e 1 @654 ]
+"6768
+[v _CCPR1L CCPR1L `VEuc  1 e 1 @657 ]
+"6788
+[v _CCPR1H CCPR1H `VEuc  1 e 1 @658 ]
+"6808
+[v _CCP1CON CCP1CON `VEuc  1 e 1 @659 ]
+"6983
+[v _SLRCONA SLRCONA `VEuc  1 e 1 @780 ]
+"7053
+[v _SLRCONB SLRCONB `VEuc  1 e 1 @781 ]
+"7123
+[v _SLRCONC SLRCONC `VEuc  1 e 1 @782 ]
+"7304
+[v _INLVLA INLVLA `VEuc  1 e 1 @908 ]
+"7374
+[v _INLVLB INLVLB `VEuc  1 e 1 @909 ]
+"7444
+[v _INLVLC INLVLC `VEuc  1 e 1 @910 ]
+"7514
+[v _INLVLE INLVLE `VEuc  1 e 1 @912 ]
+"7543
+[v _IOCAP IOCAP `VEuc  1 e 1 @913 ]
+"7613
+[v _IOCAN IOCAN `VEuc  1 e 1 @914 ]
+"7683
+[v _IOCAF IOCAF `VEuc  1 e 1 @915 ]
+"7753
+[v _IOCBP IOCBP `VEuc  1 e 1 @916 ]
+"7823
+[v _IOCBN IOCBN `VEuc  1 e 1 @917 ]
+"7893
+[v _IOCBF IOCBF `VEuc  1 e 1 @918 ]
+"7963
+[v _IOCCP IOCCP `VEuc  1 e 1 @919 ]
+"8033
+[v _IOCCN IOCCN `VEuc  1 e 1 @920 ]
+"8103
+[v _IOCCF IOCCF `VEuc  1 e 1 @921 ]
+"8173
+[v _IOCEP IOCEP `VEuc  1 e 1 @925 ]
+"8194
+[v _IOCEN IOCEN `VEuc  1 e 1 @926 ]
+"8215
+[v _IOCEF IOCEF `VEuc  1 e 1 @927 ]
+"38 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/interrupt.c
+[v _INT_InterruptHandler INT_InterruptHandler `*.37(v  1 e 2 0 ]
+"38 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/timer/src/tmr2.c
+[v _TMR2_PeriodMatchCallback TMR2_PeriodMatchCallback `*.37(v  1 s 2 TMR2_PeriodMatchCallback ]
+"41 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\main.c
+[v _main main `(i  1 e 2 0 ]
+{
+"64
+} 0
+"39 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/system.c
+[v _SYSTEM_Initialize SYSTEM_Initialize `(v  1 e 1 0 ]
+{
+"48
+} 0
+"36 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/watchdog.c
+[v _WDT_Initialize WDT_Initialize `(v  1 e 1 0 ]
+{
+"40
+} 0
+"45 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/timer/src/tmr2.c
+[v _TMR2_Initialize TMR2_Initialize `(v  1 e 1 0 ]
+{
+"56
+} 0
+"38 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/pins.c
+[v _PIN_MANAGER_Initialize PIN_MANAGER_Initialize `(v  1 e 1 0 ]
+{
+"118
+} 0
+"40 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/interrupt.c
+[v _INTERRUPT_Initialize INTERRUPT_Initialize `(v  1 e 1 0 ]
+{
+"50
+} 0
+"71
+[v _INT_SetInterruptHandler INT_SetInterruptHandler `(v  1 e 1 0 ]
+{
+[v INT_SetInterruptHandler@InterruptHandler InterruptHandler `*.37(v  1 p 2 0 ]
+"73
+} 0
+"39 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/system/src/clock.c
+[v _CLOCK_Initialize CLOCK_Initialize `(v  1 e 1 0 ]
+{
+"47
+} 0
+"50 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/pwm/src/ccp1.c
+[v _CCP1_Initialize CCP1_Initialize `(v  1 e 1 0 ]
+{
+"63
+} 0
+"41 C:\Users\chris\MPLABXProjects\PID_BallBalance.X\mcc_generated_files/adc/src/adc.c
+[v _ADC_Initialize ADC_Initialize `(v  1 e 1 0 ]
+{
+"60
+} 0

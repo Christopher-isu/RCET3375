@@ -6,12 +6,7 @@
 # 1 "<built-in>" 2
 # 1 "i2c_SLAVE.S" 2
 ;=================================================================
-; PIC16F883 ? I2C 3-Servo Controller ? VERSION 2.1 (OPTION 1)
-; 3 independent servos ? 2 hardware + 1 bit-banged from main loop
-; Servo 0 (ID 00) ? RC2 (CCP1 hardware)
-; Servo 1 (ID 01) ? RC1 (CCP2 hardware)
-; Servo 2 (ID 10) ? RB0 (bit-banged using Timer2 compare ? 16 µs resolution)
-; Mapping: 62 + pos ? 0x00 ? 1.000 ms, 0x20 ? 1.500 ms, 0x3F = 2.000 ms
+; PIC16F883 ? I2C 3-Servo Controller ? v4.6 (Step 1: RB0 Readability)
 ;=================================================================
 # 1 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include/xc.inc" 1 3
 
@@ -2321,7 +2316,7 @@ stk_offset SET 0
 auto_size SET 0
 ENDM
 # 8 "C:\\Program Files\\Microchip\\xc8\\v3.10\\pic\\include/xc.inc" 2 3
-# 10 "i2c_SLAVE.S" 2
+# 5 "i2c_SLAVE.S" 2
 
 config FOSC = XT
 config WDTE = OFF
@@ -2335,29 +2330,23 @@ config FCMEN = OFF
 config LVP = OFF
 config WRT = OFF
 
-;=================================================================
-; Access-bank variables
-;=================================================================
 PSECT udata_acs
 W_SAVE: DS 1
 STATUS_SAVE: DS 1
 RECV_BYTE: DS 1
 TEMP: DS 1
-SERVO_POS_0: DS 1 ; servo ID 00
-SERVO_POS_1: DS 1 ; servo ID 01
-SERVO_POS_2: DS 1 ; servo ID 10
-TMR2_MATCH: DS 1 ; Timer2 value when ((PORTB) and 07Fh), 0 should go low
+SERVO_POS_0: DS 1
+SERVO_POS_1: DS 1
+SERVO_POS_2: DS 1
 
 PSECT resetVect,class=CODE,delta=2
     goto Start
+
 PSECT isrVect,class=CODE,delta=2
     goto ISR
 
 PSECT code,class=CODE,delta=2
 
-;=================================================================
-; ISR ? I2C only
-;=================================================================
 ISR:
     movwf W_SAVE
     swapf STATUS,W
@@ -2368,37 +2357,59 @@ ISR:
     bcf PIR1,3
 
     BANKSEL SSPBUF
-    movf SSPBUF,W ; clear ((SSPSTAT) and 07Fh), 0 ? ACK
+    movf SSPBUF,W
+    movwf RECV_BYTE
 
     BANKSEL SSPSTAT
     btfss SSPSTAT,5
     goto Release_Clock
 
+    movf RECV_BYTE,W
+    movwf TEMP
+    andlw 0x3F
     movwf RECV_BYTE
 
-    ; Extract servo ID
-    movf RECV_BYTE,W
+    movf TEMP,W
     andlw 0xC0
     movwf TEMP
 
-    movf RECV_BYTE,W
-    andlw 0x3F ; extract position
-
-    ; Servo 0
-    movf TEMP,F
     btfsc STATUS,2
-    movwf SERVO_POS_0
+    goto Store_Servo0
 
-    ; Servo 1
     movlw 0x40
     subwf TEMP,W
     btfsc STATUS,2
-    movwf SERVO_POS_1
+    goto Store_Servo1
 
-    ; Servo 2
     movlw 0x80
     subwf TEMP,W
     btfsc STATUS,2
+    goto Store_Servo2
+
+    movlw 0xC0
+    subwf TEMP,W
+    btfsc STATUS,2
+    goto Store_Servo3
+
+    goto Release_Clock
+
+Store_Servo0:
+    movf RECV_BYTE,W
+    movwf SERVO_POS_0
+    goto Release_Clock
+
+Store_Servo1:
+    movf RECV_BYTE,W
+    movwf SERVO_POS_1
+    goto Release_Clock
+
+Store_Servo2:
+    movf RECV_BYTE,W
+    movwf SERVO_POS_2
+    goto Release_Clock
+
+Store_Servo3:
+    movf RECV_BYTE,W
     movwf SERVO_POS_2
 
 Release_Clock:
@@ -2412,9 +2423,6 @@ ISR_Exit:
     swapf W_SAVE,W
     retfie
 
-;=================================================================
-; Initialization
-;=================================================================
 Start:
     BANKSEL ANSEL
     clrf ANSEL
@@ -2434,13 +2442,12 @@ Start:
     movlw 0xFF
     movwf TRISA
     BANKSEL TRISB
-    movlw 0b11111110 ; ((PORTB) and 07Fh), 0 output
+    movlw 0b11111110
     movwf TRISB
     BANKSEL TRISC
-    movlw 0b11111000 ; ((PORTC) and 07Fh), 2, ((PORTC) and 07Fh), 1 output
+    movlw 0b11111000
     movwf TRISC
 
-    ; Timer2 ? 1 ms period, 16 µs/tick
     BANKSEL PR2
     movlw 249
     movwf PR2
@@ -2448,22 +2455,24 @@ Start:
     movlw 0b00000111
     movwf T2CON
 
-    ; CCP1 and CCP2 PWM
     BANKSEL CCP1CON
     movlw 0x0C
     movwf CCP1CON
-    movlw 0x0C
     movwf CCP2CON
+    BANKSEL CCP1CON
+    bcf CCP1CON,5 ; Clear DC1B bits once
+    bcf CCP1CON,4
+    BANKSEL CCP2CON
+    bcf CCP2CON,5 ; Clear DC2B bits once
+    bcf CCP2CON,4
 
-    ; Default centered
     movlw 32
     movwf SERVO_POS_0
     movwf SERVO_POS_1
     movwf SERVO_POS_2
 
-    ; I2C slave 0x20
     BANKSEL SSPADD
-    movlw 0x20
+    movlw 0x40
     movwf SSPADD
     BANKSEL SSPSTAT
     movlw 0x80
@@ -2473,50 +2482,45 @@ Start:
     movwf SSPCON
 
     BANKSEL PIE1
-    bsf PIE1,3 ; ((PIE1) and 07Fh), 3 only
+    bsf PIE1,3
     BANKSEL INTCON
     bsf INTCON,7
     bsf INTCON,6
 
-;=================================================================
-; Main loop ? 3 servos with perfect timing
-;=================================================================
 Main_Loop:
-    ; Update hardware PWM
     movf SERVO_POS_0,W
     addlw 62
     BANKSEL CCPR1L
     movwf CCPR1L
-    BANKSEL CCP1CON
-    bcf CCP1CON,5
-    bcf CCP1CON,4
 
     movf SERVO_POS_1,W
     addlw 62
     BANKSEL CCPR2L
     movwf CCPR2L
-    BANKSEL CCP2CON
-    bcf CCP2CON,5
-    bcf CCP2CON,4
 
-    ; Bit-banged PWM on ((PORTB) and 07Fh), 0 using TMR2
+    ; STEP 1: ((PORTB) and 07Fh), 0 compare - CLEANER READABLE VERSION
+    bcf INTCON,7 ; Disable interrupts
     BANKSEL TMR2
-    movf TMR2,W ; current Timer2 value
+    movf TMR2,W
     movwf TEMP
+    BANKSEL SERVO_POS_2
     movf SERVO_POS_2,W
     addlw 62
-    subwf TEMP,W ; W = TMR2 - (62 + pos)
-    btfss STATUS,0 ; if TMR2 >= target
-    goto RB0_Low
-    bsf PORTB,0 ; ((PORTB) and 07Fh), 0 high
-    goto After_RB0
-RB0_Low:
-    bcf PORTB,0 ; ((PORTB) and 07Fh), 0 low
-After_RB0:
+    subwf TEMP,W ; TMR2 - threshold
+    btfsc STATUS,0 ; TMR2 >= threshold?
+    goto RB0_High
+
+    bcf PORTB,0 ; TMR2 < threshold ? LOW
+    goto RB0_Done
+
+RB0_High:
+    bsf PORTB,0 ; TMR2 >= threshold ? HIGH
+
+RB0_Done:
+    bsf INTCON,7 ; Re-enable interrupts
 
     BANKSEL PORTC
-    bsf PORTC,0 ; heartbeat
-
+    bsf PORTC,0
     goto Main_Loop
 
     END
